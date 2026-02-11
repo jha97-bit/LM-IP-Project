@@ -1,21 +1,17 @@
-# LM-IP-Project
+# MCDA MVP
 
-## Overview
-LM Industry Practicum Project
+Interactive Multi-Criteria Decision Analysis Web App.
+
+## Features
+- TOPSIS
+- Scenario comparison
+- Run history
+- Interactive charts
+- Data governance-ready architecture
 
 ## Tech Stack
 - Python
-- SQL
-- Pandas
-- Jupyter Notebook
-
-## Project Structure
-- /data
-- /notebooks
-- /src
-
-## How to Run
-Steps to reproduce or run the project.
-
-## Results / Insights
-Key findings or outcomes.
+- Streamlit
+- PostgreSQL
+- SQLAlchemy
+- Plotly
