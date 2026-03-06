@@ -11,7 +11,6 @@ from persistence.repositories.criterion_repo import CriterionRepo
 from persistence.repositories.measurement_repo import MeasurementRepo
 from persistence.repositories.preference_repo import PreferenceRepo
 
-
 st.title("Step 2: Data Input")
 
 engine = get_engine()
@@ -41,68 +40,10 @@ with nav_left:
 
 with nav_right:
     can_next = bool(st.session_state.get("data_ready"))
-    if st.button("Next: Step 3 (Run Models)", type="primary", disabled=not can_next):
+    if st.button("Next: Step 3 (Run Models)", type="primary"):
         st.switch_page("pages/3_run_models.py")
 
 st.caption("Save Alternatives + Criteria, then save Matrix + Weights to enable Next.")
-st.divider()
-
-# ----------------------------
-# Preference Set (select or create)
-# ----------------------------
-st.subheader("Preference Set")
-
-with engine.begin() as conn:
-    prefs = conn.execute(
-        text(
-            """
-            SELECT preference_set_id::text AS preference_set_id, name, type, status, created_at
-            FROM preference_sets
-            WHERE scenario_id = :sid
-            ORDER BY created_at DESC
-            """
-        ),
-        {"sid": scenario_id},
-    ).mappings().all()
-
-prefs = [dict(p) for p in prefs]
-
-pref_options = ["Create new…"] + [p["preference_set_id"] for p in prefs]
-default_pref = st.session_state.get("preference_set_id")
-if not default_pref:
-    default_pref = "Create new…" if not prefs else prefs[0]["preference_set_id"]
-
-selected_pref = st.selectbox(
-    "Select preference set",
-    options=pref_options,
-    index=pref_options.index(default_pref) if default_pref in pref_options else 0,
-    format_func=lambda x: "Create new…" if x == "Create new…" else next(
-        pp["name"] for pp in prefs if pp["preference_set_id"] == x
-    ),
-)
-
-if selected_pref == "Create new…":
-    new_pref_name = st.text_input("New preference set name", value="Default Weights")
-    new_pref_type = st.selectbox("Type", options=["direct"], index=0)
-
-    if st.button("Create Preference Set", type="primary"):
-        pref_id = pref_repo.get_or_create_preference_set(
-            scenario_id=scenario_id,
-            name=new_pref_name.strip() or "Default Weights",
-            pref_type=new_pref_type,
-            created_by=user_name,
-        )
-        st.session_state["preference_set_id"] = pref_id
-        st.success(f"Preference set created: {pref_id}")
-        st.rerun()
-else:
-    st.session_state["preference_set_id"] = selected_pref
-
-pref_id = st.session_state.get("preference_set_id")
-if not pref_id:
-    st.info("Create or select a preference set to continue.")
-    st.stop()
-
 st.divider()
 
 # ----------------------------
@@ -125,7 +66,7 @@ alts_df = pd.DataFrame({"Alternative Name": default_alts})
 alts_df = st.data_editor(
     alts_df,
     num_rows="dynamic",
-    use_container_width=True,
+    width="stretch",
     key="alts_editor_step2",
 )
 
@@ -135,7 +76,7 @@ alt_names = list(dict.fromkeys(alt_names))
 st.divider()
 
 # ----------------------------
-# Criteria (dropdown for Scale Type and Unit, single Description)
+# Criteria
 # ----------------------------
 st.subheader("Criteria")
 
@@ -169,7 +110,7 @@ else:
 crit_df = st.data_editor(
     crit_df,
     num_rows="dynamic",
-    use_container_width=True,
+    width="stretch",
     key="crit_editor_step2",
     column_config={
         "Direction": st.column_config.SelectboxColumn("Direction", options=DIRECTION_OPTIONS),
@@ -223,7 +164,7 @@ with save_left:
         crit_repo.delete_missing(scenario_id, crit_names)
 
         st.session_state["data_ready"] = False
-        st.success("Saved. Now fill Matrix and Weights and save to enable Next.")
+        st.success("Saved. Now pick Preference Set, then fill Matrix and Weights and save to enable Next.")
         st.rerun()
 
 with save_right:
@@ -236,7 +177,69 @@ alt_names_db = [a["name"] for a in existing_alts]
 crit_names_db = [c["name"] for c in existing_crit]
 
 if not alt_names_db or not crit_names_db:
-    st.info("Save alternatives and criteria first to unlock the matrix editor.")
+    st.info("Save alternatives and criteria first to unlock the Preference Set, matrix editor, and weights.")
+    st.stop()
+
+st.divider()
+
+# ----------------------------
+# Preference Set (select or create) AFTER saving alt/crit
+# ----------------------------
+st.subheader("Preference Set")
+
+with engine.begin() as conn:
+    prefs = conn.execute(
+        text("""
+            SELECT preference_set_id::text AS preference_set_id, name, type, status, created_at
+            FROM preference_sets
+            WHERE scenario_id = :sid
+            ORDER BY created_at DESC
+        """),
+        {"sid": scenario_id},
+    ).mappings().all()
+
+prefs = [dict(p) for p in prefs]
+
+PREF_CREATE = "Create new…"
+pref_ids = [p["preference_set_id"] for p in prefs]
+pref_id_to_name = {p["preference_set_id"]: p["name"] for p in prefs}
+pref_options = [PREF_CREATE] + pref_ids
+
+default_pref = st.session_state.get("preference_set_id") or (pref_ids[0] if pref_ids else PREF_CREATE)
+if default_pref not in pref_options:
+    default_pref = PREF_CREATE
+
+picked_pref = st.multiselect(
+    "Select preference set",
+    options=pref_options,
+    default=[default_pref],
+    max_selections=1,
+    format_func=lambda x: PREF_CREATE if x == PREF_CREATE else pref_id_to_name.get(x, x),
+    key=f"pref_pick_step2_{scenario_id}",
+)
+
+selected_pref = picked_pref[0] if picked_pref else PREF_CREATE
+
+if selected_pref == PREF_CREATE:
+    new_pref_name = st.text_input("New preference set name", value="Default Weights")
+    new_pref_type = st.selectbox("Type", options=["direct"], index=0)
+
+    if st.button("Create Preference Set", type="primary"):
+        pref_id = pref_repo.get_or_create_preference_set(
+            scenario_id=scenario_id,
+            name=new_pref_name.strip() or "Default Weights",
+            pref_type=new_pref_type,
+            created_by=user_name,
+        )
+        st.session_state["preference_set_id"] = pref_id
+        st.success(f"Preference set created: {pref_id}")
+        st.rerun()
+else:
+    st.session_state["preference_set_id"] = selected_pref
+
+pref_id = st.session_state.get("preference_set_id")
+if not pref_id:
+    st.info("Create or select a preference set to continue.")
     st.stop()
 
 st.divider()
@@ -252,12 +255,12 @@ if existing_matrix.empty:
 else:
     matrix_ui = existing_matrix.reindex(index=alt_names_db, columns=crit_names_db)
 
-matrix_ui = st.data_editor(matrix_ui, use_container_width=True, key="matrix_editor_step2")
+matrix_ui = st.data_editor(matrix_ui, width="stretch", key=f"matrix_editor_step2_{scenario_id}")
 
 st.divider()
 
 # ----------------------------
-# Weights editor
+# Weights editor (tied to selected pref set)
 # ----------------------------
 st.subheader("Weights")
 

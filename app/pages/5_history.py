@@ -1,18 +1,17 @@
-import bootstrap
+# app/pages/5_history.py
+import bootstrap  # noqa: F401
 
-import pandas as pd
 import streamlit as st
+import pandas as pd
 from sqlalchemy import text
 
 from persistence.engine import get_engine
-from persistence.repositories.run_repo import RunRepo
-from persistence.repositories.result_repo import ResultRepo
+from services.delete_service import DeleteService
 
-st.title("Step 5: History and Compare")
+st.title("Step 5: History and Logs")
 
 engine = get_engine()
-run_repo = RunRepo(engine)
-result_repo = ResultRepo(engine)
+deleter = DeleteService(engine)
 
 scenario_id = st.session_state.get("scenario_id")
 if not scenario_id:
@@ -25,257 +24,245 @@ with nav_left:
     if st.button("Back: Step 4 (Results)"):
         st.switch_page("pages/4_results.py")
 with nav_right:
-    st.button("Next", disabled=True)
+    if st.button("Next: Step 6 (Compare)"):
+        st.switch_page("pages/6_compare.py")
+
 
 st.divider()
 
 # ----------------------------
-# Load decision_id for current scenario (for scenario comparison)
+# Fetch current decision_id (for danger zone)
 # ----------------------------
 with engine.begin() as conn:
     row = conn.execute(
-        text(
-            """
+        text("""
             SELECT decision_id::text AS decision_id
             FROM scenarios
             WHERE scenario_id = :sid
-            """
-        ),
+        """),
         {"sid": scenario_id},
     ).mappings().first()
 
 decision_id = row["decision_id"] if row else None
-if not decision_id:
-    st.error("Could not find decision for the selected scenario.")
-    st.stop()
 
 # ----------------------------
-# Preference names lookup (for readable labels)
+# Pref map (names)
 # ----------------------------
 with engine.begin() as conn:
-    pref_map_rows = conn.execute(
-        text(
-            """
+    pref_rows = conn.execute(
+        text("""
             SELECT preference_set_id::text AS preference_set_id, name
             FROM preference_sets
             WHERE scenario_id = :sid
-            """
-        ),
+        """),
         {"sid": scenario_id},
     ).mappings().all()
 
-pref_id_to_name = {r["preference_set_id"]: r["name"] for r in pref_map_rows}
-
-def run_label(r: dict, pref_map: dict) -> str:
-    pref_name = pref_map.get(r["preference_set_id"], r["preference_set_id"][:8] + "…")
-    by = (r.get("executed_by") or "").strip()
-    by_part = f" by {by}" if by else ""
-    return f"{r['executed_at']} | {r['method'].upper()} | {pref_name}{by_part}"
+pref_id_to_name = {r["preference_set_id"]: r["name"] for r in pref_rows}
 
 # ----------------------------
-# Section 1: Run history for current scenario
+# Runs table (only fields you want)
 # ----------------------------
 st.subheader("Run History (Current Scenario)")
 
-runs = run_repo.list_runs(scenario_id, limit=200)
-if not runs:
-    st.info("No runs yet. Go to Step 3 to run TOPSIS.")
+# If you later add run_label column, this query will still work
+# by probing if run_label exists.
+with engine.begin() as conn:
+    cols = conn.execute(
+        text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema='public' AND table_name='runs'
+        """)
+    ).fetchall()
+    run_cols = {c[0] for c in cols}
+
+has_run_label = "run_label" in run_cols
+
+select_sql = """
+    SELECT
+        run_id::text AS run_id,
+        executed_at,
+        method,
+        preference_set_id::text AS preference_set_id,
+        executed_by
+"""
+if has_run_label:
+    select_sql += ", run_label"
 else:
-    runs_df = pd.DataFrame(runs)
-    runs_df["preference_name"] = runs_df["preference_set_id"].map(lambda x: pref_id_to_name.get(x, x))
-    st.dataframe(
-        runs_df[["executed_at", "method", "preference_name", "executed_by", "run_id"]],
-        use_container_width=True,
-    )
+    select_sql += ", NULL::text AS run_label"
 
-    st.download_button(
-        "Download Run History CSV",
-        data=runs_df[["executed_at", "method", "preference_name", "executed_by", "run_id"]]
-        .to_csv(index=False)
-        .encode("utf-8"),
-        file_name="run_history_current_scenario.csv",
-        mime="text/csv",
-    )
-
-st.divider()
-
-# ----------------------------
-# Section 2: Compare two runs within current scenario
-# ----------------------------
-st.subheader("Compare Two Runs (Current Scenario)")
-
-topsis_runs = [r for r in runs if r["method"] == "topsis"]
-if len(topsis_runs) < 2:
-    st.info("Need at least 2 TOPSIS runs in this scenario to compare. Create another run in Step 3.")
-else:
-    topsis_df = pd.DataFrame(topsis_runs)
-    topsis_df["label"] = topsis_df.apply(lambda row: run_label(row.to_dict(), pref_id_to_name), axis=1)
-    labels = topsis_df["label"].tolist()
-    label_to_run_id = dict(zip(labels, topsis_df["run_id"].tolist()))
-
-    col1, col2 = st.columns(2)
-    with col1:
-        run_a_label = st.selectbox("Run A", options=labels, index=0)
-    with col2:
-        run_b_label = st.selectbox("Run B", options=labels, index=1 if len(labels) > 1 else 0)
-
-    run_a = label_to_run_id[run_a_label]
-    run_b = label_to_run_id[run_b_label]
-
-    a_scores = pd.DataFrame(result_repo.get_scores_with_names(run_a))
-    b_scores = pd.DataFrame(result_repo.get_scores_with_names(run_b))
-
-    if a_scores.empty or b_scores.empty:
-        st.error("One of the selected runs has no results saved.")
-    else:
-        a_scores = a_scores.rename(columns={"score": "score_a", "rank": "rank_a"})
-        b_scores = b_scores.rename(columns={"score": "score_b", "rank": "rank_b"})
-
-        cmp_df = a_scores.merge(b_scores, on="alternative_name", how="outer")
-        cmp_df["rank_delta"] = cmp_df["rank_b"] - cmp_df["rank_a"]
-        cmp_df["score_delta"] = cmp_df["score_b"] - cmp_df["score_a"]
-
-        cmp_df = cmp_df.sort_values(by="rank_delta", key=lambda s: s.abs(), ascending=False)
-
-        st.dataframe(cmp_df, use_container_width=True)
-
-        st.download_button(
-            "Download Run Comparison CSV",
-            data=cmp_df.to_csv(index=False).encode("utf-8"),
-            file_name="run_comparison_current_scenario.csv",
-            mime="text/csv",
-        )
-
-        st.caption("rank_delta > 0 means the alternative ranked worse in Run B. rank_delta < 0 means it improved in Run B.")
-
-st.divider()
-
-# ----------------------------
-# Section 3: Compare two scenarios under the same decision
-# ----------------------------
-st.subheader("Compare Two Scenarios (Same Decision)")
+select_sql += """
+    FROM runs
+    WHERE scenario_id = :sid
+    ORDER BY executed_at DESC
+    LIMIT 200
+"""
 
 with engine.begin() as conn:
-    scen_rows = conn.execute(
-        text(
-            """
-            SELECT scenario_id::text AS scenario_id, name, description, created_at, created_by
-            FROM scenarios
-            WHERE decision_id = :did
-            ORDER BY created_at ASC
-            """
-        ),
-        {"did": decision_id},
-    ).mappings().all()
+    runs = conn.execute(text(select_sql), {"sid": scenario_id}).mappings().all()
 
-scenarios = [dict(r) for r in scen_rows]
-if len(scenarios) < 2:
-    st.info("You need at least 2 scenarios under this decision to compare.")
+runs = [dict(r) for r in runs]
+if not runs:
+    st.info("No runs yet. Go to Step 3 to run TOPSIS.")
     st.stop()
 
-scen_ids = [s["scenario_id"] for s in scenarios]
+runs_df = pd.DataFrame(runs)
+runs_df["preference_set_name"] = runs_df["preference_set_id"].map(lambda x: pref_id_to_name.get(x, x))
 
-def scen_label(s: dict) -> str:
-    return f"{s['name']} ({s['scenario_id'][:8]}…)"
+# Force display columns in the exact order you asked
+display_cols = ["executed_at", "method", "preference_set_name", "executed_by", "run_label", "run_id"]
+runs_df = runs_df[display_cols]
 
-default_a = scenario_id
-default_b = next((sid for sid in scen_ids if sid != default_a), scen_ids[0])
-
-colA, colB = st.columns(2)
-with colA:
-    scen_a_id = st.selectbox(
-        "Scenario A",
-        options=scen_ids,
-        index=scen_ids.index(default_a) if default_a in scen_ids else 0,
-        format_func=lambda x: scen_label(next(ss for ss in scenarios if ss["scenario_id"] == x)),
-        key="scen_a_select",
-    )
-
-with colB:
-    scen_b_id = st.selectbox(
-        "Scenario B",
-        options=scen_ids,
-        index=scen_ids.index(default_b) if default_b in scen_ids else 1,
-        format_func=lambda x: scen_label(next(ss for ss in scenarios if ss["scenario_id"] == x)),
-        key="scen_b_select",
-    )
-
-if scen_a_id == scen_b_id:
-    st.warning("Pick two different scenarios to compare.")
-    st.stop()
-
-use_latest = st.checkbox("Use latest TOPSIS run in each scenario", value=True)
-
-def load_pref_map_for_scenario(sid: str) -> dict:
-    with engine.begin() as conn:
-        rows = conn.execute(
-            text(
-                """
-                SELECT preference_set_id::text AS preference_set_id, name
-                FROM preference_sets
-                WHERE scenario_id = :sid
-                """
-            ),
-            {"sid": sid},
-        ).mappings().all()
-    return {r["preference_set_id"]: r["name"] for r in rows}
-
-def list_topsis_runs_for_scenario(sid: str):
-    rr = run_repo.list_runs(sid, limit=200)
-    return [r for r in rr if r["method"] == "topsis"]
-
-runs_a = list_topsis_runs_for_scenario(scen_a_id)
-runs_b = list_topsis_runs_for_scenario(scen_b_id)
-
-if not runs_a or not runs_b:
-    st.warning("Both scenarios must have at least 1 TOPSIS run to compare.")
-    st.stop()
-
-pref_map_a = load_pref_map_for_scenario(scen_a_id)
-pref_map_b = load_pref_map_for_scenario(scen_b_id)
-
-def pick_run_ui(label: str, runs_list: list, pref_map: dict, key: str):
-    df = pd.DataFrame(runs_list)
-    df["label"] = df.apply(lambda row: run_label(row.to_dict(), pref_map), axis=1)
-    labels = df["label"].tolist()
-    label_to_id = dict(zip(labels, df["run_id"].tolist()))
-    chosen_label = st.selectbox(label, options=labels, index=0, key=key)
-    return label_to_id[chosen_label]
-
-if use_latest:
-    run_a_id = runs_a[0]["run_id"]
-    run_b_id = runs_b[0]["run_id"]
-    st.info(f"Scenario A run: {run_a_id} | Scenario B run: {run_b_id}")
-else:
-    col1, col2 = st.columns(2)
-    with col1:
-        run_a_id = pick_run_ui("Select TOPSIS run for Scenario A", runs_a, pref_map_a, key="run_a_pick")
-    with col2:
-        run_b_id = pick_run_ui("Select TOPSIS run for Scenario B", runs_b, pref_map_b, key="run_b_pick")
-
-a_scores = pd.DataFrame(result_repo.get_scores_with_names(run_a_id))
-b_scores = pd.DataFrame(result_repo.get_scores_with_names(run_b_id))
-
-if a_scores.empty or b_scores.empty:
-    st.error("Selected run(s) missing results. Re-run TOPSIS in Step 3.")
-    st.stop()
-
-a_scores = a_scores.rename(columns={"score": "score_a", "rank": "rank_a"})
-b_scores = b_scores.rename(columns={"score": "score_b", "rank": "rank_b"})
-
-cmp_scen_df = a_scores.merge(b_scores, on="alternative_name", how="outer")
-cmp_scen_df["rank_delta"] = cmp_scen_df["rank_b"] - cmp_scen_df["rank_a"]
-cmp_scen_df["score_delta"] = cmp_scen_df["score_b"] - cmp_scen_df["score_a"]
-cmp_scen_df = cmp_scen_df.sort_values(by="rank_delta", key=lambda s: s.abs(), ascending=False)
-
-st.subheader("Scenario Comparison Result")
-st.dataframe(cmp_scen_df, use_container_width=True)
+st.dataframe(runs_df, width="stretch")
 
 st.download_button(
-    "Download Scenario Comparison CSV",
-    data=cmp_scen_df.to_csv(index=False).encode("utf-8"),
-    file_name="scenario_comparison.csv",
+    "Download History CSV",
+    data=runs_df.to_csv(index=False).encode("utf-8"),
+    file_name="run_history.csv",
     mime="text/csv",
 )
 
-st.caption("This compares TOPSIS results across scenarios under the same decision, using one run per scenario.")
+st.divider()
+
+# ----------------------------
+# Select a run for actions
+# ----------------------------
+st.subheader("Open or Manage a Run")
+
+run_options = runs_df["run_id"].tolist()
+
+def _label_from_run_id(rid: str) -> str:
+    r = next(rr for rr in runs if rr["run_id"] == rid)
+    pref_name = pref_id_to_name.get(r["preference_set_id"], r["preference_set_id"][:8] + "…")
+    base = f"{r['executed_at']} | {str(r['method']).upper()} | {pref_name}"
+    if r.get("executed_by"):
+        base += f" | {r['executed_by']}"
+    if r.get("run_label"):
+        base = f"{r['run_label']} | " + base
+    return base
+
+picked = st.multiselect(
+    "Pick a run",
+    options=run_options,
+    max_selections=1,
+    default=[st.session_state.get("last_run_id")] if st.session_state.get("last_run_id") in run_options else [run_options[0]],
+    format_func=_label_from_run_id,
+    key=f"history_run_pick_{scenario_id}",
+)
+run_id = picked[0] if picked else run_options[0]
+
+# Load run metadata to enable "load build"
+with engine.begin() as conn:
+    meta = conn.execute(
+        text("""
+            SELECT
+                run_id::text AS run_id,
+                scenario_id::text AS scenario_id,
+                preference_set_id::text AS preference_set_id,
+                method,
+                executed_at,
+                executed_by
+            FROM runs
+            WHERE run_id = :rid
+        """),
+        {"rid": run_id},
+    ).mappings().first()
+
+if not meta:
+    st.error("Run not found.")
+    st.stop()
+
+btn1, btn2, btn3 = st.columns([1, 1, 2])
+
+with btn1:
+    if st.button("Go to Results"):
+        st.session_state["scenario_id"] = meta["scenario_id"]
+        st.session_state["preference_set_id"] = meta["preference_set_id"]
+        st.session_state["last_run_id"] = meta["run_id"]
+        st.switch_page("pages/4_results.py")
+
+with btn2:
+    if st.button("Load this build"):
+        # This makes your app jump back with all context preselected
+        st.session_state["scenario_id"] = meta["scenario_id"]
+        st.session_state["preference_set_id"] = meta["preference_set_id"]
+        st.session_state["last_run_id"] = meta["run_id"]
+        st.success("Loaded build into session. You can go to Step 4 to view results or Step 3 to rerun.")
+
+with btn3:
+    st.caption("Tip: “Load this build” sets Scenario + Preference Set + Run for fast return to your exact results.")
+
+st.divider()
+
+# ----------------------------
+# Delete run (double confirmation)
+# ----------------------------
+st.subheader("Delete Run")
+
+token = f"DELETE {run_id[:8]}"
+st.warning("This deletes the run and all generated TOPSIS artifacts for that run. It does not delete your scenario inputs.")
+
+ack = st.checkbox("I understand this is permanent", value=False, key=f"ack_run_{run_id}")
+typed = st.text_input(f"Type to confirm: {token}", value="", key=f"type_run_{run_id}")
+
+can_delete = ack and typed.strip() == token
+
+if st.button("Delete this run", type="primary", disabled=not can_delete, key=f"btn_del_run_{run_id}"):
+    res = deleter.delete_run(run_id)
+    if res.ok:
+        # Clear if you deleted the selected run
+        if st.session_state.get("last_run_id") == run_id:
+            st.session_state["last_run_id"] = None
+        st.success(res.message)
+        st.rerun()
+    else:
+        st.error(res.message)
+
+# ----------------------------
+# Danger Zone
+# ----------------------------
+with st.expander("Danger zone: delete scenario or decision", expanded=False):
+    st.error("These actions delete inputs and history. Use only if you really want to wipe data.")
+
+    if decision_id:
+        st.caption(f"Current scenario_id: {scenario_id}")
+        st.caption(f"Current decision_id: {decision_id}")
+
+    st.markdown("### Delete entire scenario")
+    scen_token = f"DELETE SCENARIO {scenario_id[:8]}"
+    scen_ack = st.checkbox("I understand scenario delete is permanent", value=False, key=f"ack_scen_{scenario_id}")
+    scen_typed = st.text_input(f"Type to confirm: {scen_token}", value="", key=f"type_scen_{scenario_id}")
+    scen_ok = scen_ack and scen_typed.strip() == scen_token
+
+    if st.button("Delete scenario", disabled=not scen_ok, key=f"btn_del_scen_{scenario_id}"):
+        res = deleter.delete_scenario(scenario_id)
+        if res.ok:
+            st.session_state["scenario_id"] = None
+            st.session_state["preference_set_id"] = None
+            st.session_state["last_run_id"] = None
+            st.success(res.message)
+            st.switch_page("pages/1_decision_setup.py")
+        else:
+            st.error(res.message)
+
+    st.markdown("### Delete entire decision")
+    if decision_id:
+        dec_token = f"DELETE DECISION {decision_id[:8]}"
+        dec_ack = st.checkbox("I understand decision delete is permanent", value=False, key=f"ack_dec_{decision_id}")
+        dec_typed = st.text_input(f"Type to confirm: {dec_token}", value="", key=f"type_dec_{decision_id}")
+        dec_ok = dec_ack and dec_typed.strip() == dec_token
+
+        if st.button("Delete decision", disabled=not dec_ok, key=f"btn_del_dec_{decision_id}"):
+            res = deleter.delete_decision(decision_id)
+            if res.ok:
+                st.session_state["decision_id"] = None
+                st.session_state["scenario_id"] = None
+                st.session_state["preference_set_id"] = None
+                st.session_state["last_run_id"] = None
+                st.success(res.message)
+                st.switch_page("pages/1_decision_setup.py")
+            else:
+                st.error(res.message)
+    else:
+        st.info("Decision id not found for this scenario.")
