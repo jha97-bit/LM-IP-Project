@@ -7,6 +7,7 @@ from src.ui.scaling import render_scaling_ui
 from src.ui.weighting import render_weighting_ui
 from src.ui.analysis import render_analysis_ui
 from src.ui.comparison import render_comparison_ui
+from src.ui.sensitivity import render_sensitivity_ui
 
 # Initialize Session State
 if "model" not in st.session_state:
@@ -14,7 +15,7 @@ if "model" not in st.session_state:
 st.title("Value-Focused Thinking (VFT) Application")
 
 # Sidebar Navigation
-page = st.sidebar.radio("Navigation", ["Setup", "Scaling", "Weighting", "Scoring & Analysis", "Comparison"])
+page = st.sidebar.radio("Navigation", ["Setup", "Scaling", "Weighting", "Scoring & Analysis", "Comparison", "Sensitivity Analysis"])
 
 st.sidebar.markdown("---")
 st.sidebar.header("Model Management")
@@ -52,3 +53,5 @@ elif page == "Scoring & Analysis":
     render_analysis_ui(st.session_state.model)
 elif page == "Comparison":
     render_comparison_ui(st.session_state.model)
+elif page == "Sensitivity Analysis":
+    render_sensitivity_ui(st.session_state.model)

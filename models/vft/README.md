@@ -9,7 +9,8 @@ This is a Streamlit application for Value-Focused Thinking (VFT) analysis. It al
 3.  **Weighting**: Adjust Swing Weights using sliders, visualized with Pie and Bar charts.
 4.  **Scoring & Analysis**: Input raw scores and view detailed analysis including Rankings and Contribution Charts.
 5.  **Comparison**: Compare alternatives side-by-side using Radar Charts.
-6.  **Persistence**: Save and Load models to/from JSON files.
+6.  **Sensitivity Analysis**: Analyze how variations in attribute weights affect overall scores and rankings.
+7.  **Persistence**: Save and Load models to/from JSON files.
 
 ## Installation
 
@@ -41,3 +42,4 @@ streamlit run app.py
 3.  **Weighting**: Assign importance to each attribute using swing weights.
 4.  **Scoring**: Enter raw scores for each alternative.
 5.  **Analysis/Comparison**: View rankings and compare alternatives to make a decision.
+6.  **Sensitivity Analysis**: Visualize and understand the impact of attribute weights on the final outcome.
