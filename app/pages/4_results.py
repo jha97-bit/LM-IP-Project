@@ -2,6 +2,7 @@ import bootstrap  # noqa: F401
 
 import pandas as pd
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 from sqlalchemy import text
@@ -17,6 +18,7 @@ from persistence.repositories.topsis_read_repo import TopsisReadRepo
 from services.vft_service import VFTService
 
 st.set_page_config(page_title="MCDA — Results", layout="wide")
+apply_theme()
 st.title("Step 4: Results")
 
 guard_page("pages/4_results.py", require_scenario=True)
@@ -235,7 +237,7 @@ if current_method == "topsis":
             fig = px.bar(
                 scores_df.sort_values("rank"),
                 x="alternative_name", y="score",
-                color="score", color_continuous_scale="Blues",
+                color="score", color_continuous_scale=BLUE_SCALE,
                 title="TOPSIS Score C* by Alternative",
                 labels={"alternative_name": "Alternative", "score": "C* Score"},
             )
@@ -297,9 +299,10 @@ are far from ideal best and close to ideal worst.
                             x=df_c["weighted_value"], y=df_c["alternative"],
                             mode="markers+text", text=[f"{v:.4f}" for v in df_c["weighted_value"]],
                             textposition="middle right", name="Alternative",
+                            marker=dict(color="#1D4ED8", size=10),
                         ))
-                        fig.add_vline(x=pos, line_dash="solid", annotation_text="PIS")
-                        fig.add_vline(x=neg, line_dash="dash", annotation_text="NIS")
+                        fig.add_vline(x=pos, line_dash="solid", line_color="#0F766E", annotation_text="PIS")
+                        fig.add_vline(x=neg, line_dash="dash", line_color="#2563EB", annotation_text="NIS")
                         xmin = min(df_c["weighted_value"].min(), pos, neg)
                         xmax = max(df_c["weighted_value"].max(), pos, neg)
                         pad = (xmax - xmin) * 0.1 if xmax > xmin else 0.1
@@ -314,7 +317,7 @@ are far from ideal best and close to ideal worst.
         if norm_df is not None and not norm_df.empty:
             fig_heat = px.imshow(norm_df.values, x=list(norm_df.columns), y=list(norm_df.index),
                                  aspect="auto", title="Normalized Matrix Heatmap",
-                                 color_continuous_scale="Blues")
+                                 color_continuous_scale=BLUE_SCALE)
             fig_heat.update_layout(height=380, margin=dict(l=10,r=10,t=50,b=10))
             st.plotly_chart(fig_heat, use_container_width=True)
             st.caption("**Fig: Normalized Matrix Heatmap** — Vector-normalized values. Darker = higher normalized value.")
@@ -327,7 +330,7 @@ are far from ideal best and close to ideal worst.
         if w_df is not None and not w_df.empty:
             fig_heat2 = px.imshow(w_df.values, x=list(w_df.columns), y=list(w_df.index),
                                   aspect="auto", title="Weighted Matrix Heatmap",
-                                  color_continuous_scale="Greens")
+                                  color_continuous_scale=BLUE_TEAL_SCALE)
             fig_heat2.update_layout(height=380, margin=dict(l=10,r=10,t=50,b=10))
             st.plotly_chart(fig_heat2, use_container_width=True)
             st.caption("**Fig: Weighted Matrix Heatmap** — Normalized values multiplied by criterion weights. "
@@ -351,7 +354,7 @@ elif current_method == "vft":
             fig = px.bar(
                 sc_df.sort_values("rank"),
                 x="alternative_name", y="score",
-                color="score", color_continuous_scale="Greens",
+                color="score", color_continuous_scale=BLUE_TEAL_SCALE,
                 title="VFT Total Score by Alternative",
                 labels={"alternative_name": "Alternative", "score": "Total Score"},
             )
@@ -372,10 +375,10 @@ u(x) ∈ [0,1] for each criterion. Higher = better. Score = Σ(weight_i × utili
             util_wide = util_df.pivot(index="alternative_name", columns="criterion_name", values="utility_value")
             fig_heat = px.imshow(util_wide.values, x=list(util_wide.columns), y=list(util_wide.index),
                                  aspect="auto", title="Utility Values Heatmap (0=worst, 1=best)",
-                                 color_continuous_scale="RdYlGn", zmin=0, zmax=1)
+                                 color_continuous_scale=BLUE_TEAL_SCALE, zmin=0, zmax=1)
             fig_heat.update_layout(height=400, margin=dict(l=10,r=10,t=50,b=10))
             st.plotly_chart(fig_heat, use_container_width=True)
-            st.caption("**Fig: Utility Heatmap** — Green = high utility (close to 1), Red = low utility (close to 0). "
+            st.caption("**Fig: Utility Heatmap** — Darker teal-blue cells indicate higher utility (close to 1), while lighter blue cells indicate lower utility (close to 0). "
                        "Each cell shows how well an alternative performs on a criterion after value function transformation.")
             st.dataframe(util_wide, use_container_width=True)
 
@@ -389,7 +392,7 @@ u(x) ∈ [0,1] for each criterion. Higher = better. Score = Σ(weight_i × utili
                 barmode="stack",
                 labels={"alternative_name": "Alternative", "weighted_utility": "Weighted Utility",
                         "criterion_name": "Criterion"},
-                color_discrete_sequence=px.colors.qualitative.Set2,
+                color_discrete_sequence=DISCRETE_PALETTE,
             )
             fig_stacked.update_layout(height=420, margin=dict(l=10,r=10,t=50,b=10))
             st.plotly_chart(fig_stacked, use_container_width=True)

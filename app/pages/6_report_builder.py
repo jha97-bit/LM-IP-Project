@@ -10,6 +10,7 @@ from matplotlib import colors as mcolors
 import numpy as np
 import pandas as pd
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from sqlalchemy import text
 
 from app.app_context import guard_page, sync_method_from_scenario
@@ -23,6 +24,7 @@ from persistence.repositories.topsis_read_repo import TopsisReadRepo
 from services.vft_service import VFTService
 
 st.set_page_config(page_title="MCDA — Report Builder", layout="wide")
+apply_theme()
 st.title("Step 6: Report Builder")
 
 guard_page("pages/6_report_builder.py", require_scenario=True)

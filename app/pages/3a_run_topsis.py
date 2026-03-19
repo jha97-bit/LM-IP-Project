@@ -4,6 +4,7 @@ import hashlib
 import numpy as np
 import pandas as pd
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 from sqlalchemy import text
@@ -17,6 +18,7 @@ from persistence.repositories.result_repo import ResultRepo
 from persistence.repositories.topsis_repo import TopsisRepo
 
 st.set_page_config(page_title="MCDA — Run TOPSIS", layout="wide")
+apply_theme()
 st.title("Step 3: Run TOPSIS Model")
 
 guard_page("pages/3a_run_topsis.py", require_scenario=True)
@@ -111,7 +113,7 @@ try:
     data = scenario_service.load(scenario_id, pref_id)
     ok, issues = scenario_service.validate(data)
 except Exception as e:
-    st.error(str(e))
+    st.warning(str(e))
     st.stop()
 
 st.subheader("Validation")
@@ -119,7 +121,7 @@ if ok:
     st.success("✅ Scenario data is complete and ready to run.")
 else:
     for msg in issues:
-        st.error(msg)
+        st.warning(msg)
     st.stop()
 
 # Input summary
@@ -207,7 +209,7 @@ if preview:
     fig = px.bar(
         scores_df.sort_values("rank"),
         x="alternative_name", y="score",
-        color="score", color_continuous_scale="Blues",
+        color="score", color_continuous_scale=BLUE_SCALE,
         title="TOPSIS Score C* Preview",
         labels={"alternative_name": "Alternative", "score": "C* Score"},
     )
@@ -229,12 +231,12 @@ if preview and dup_check and dup_check.get("existing_run_id"):
 
 if st.button("💾 Save Results to Database", type="primary", disabled=save_disabled):
     if preview is None:
-        st.error("Run a preview first.")
+        st.warning("Run a preview first.")
         st.stop()
 
     current_sig = compute_input_signature()
     if preview.get("sig") != current_sig:
-        st.error("Inputs changed since preview — run preview again.")
+        st.warning("Inputs changed since preview — run preview again.")
         st.stop()
 
     artifacts = preview["artifacts"]

@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 from sqlalchemy import text
@@ -18,6 +19,7 @@ from services.vft_service import VFTService
 from core.vft_model import Attribute
 
 st.set_page_config(page_title="MCDA — Run VFT", layout="wide")
+apply_theme()
 st.title("Step 3: Run VFT Model")
 
 engine = get_engine()

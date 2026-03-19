@@ -1,11 +1,13 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 
 from app.app_context import get_active_method, sync_method_from_scenario
 
 sync_method_from_scenario()
 method_choice = get_active_method()
+apply_theme()
 
 if not method_choice:
     st.title("Step 3: Analysis")

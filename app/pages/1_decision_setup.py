@@ -1,6 +1,7 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from sqlalchemy import text
 
 from app.app_context import set_scenario_context
@@ -11,6 +12,7 @@ from persistence.repositories.scenario_repo import ScenarioRepo
 from services.scenario_share_service import ScenarioShareService
 
 st.set_page_config(page_title="MCDA — Decision Setup", layout="wide")
+apply_theme()
 st.title("Step 1: Decision & Scenario Setup")
 
 engine = get_engine()
@@ -125,7 +127,7 @@ with st.expander("📦 Import a colleague's scenario (.mcda file)", expanded=Fal
                     st.toast(f"✅ Imported: {new_name or result.get('scenario_name', '')}", icon="📦")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Import failed: {e}")
+                    st.warning(f"Import failed: {e}")
 
 st.divider()
 

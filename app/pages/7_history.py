@@ -2,6 +2,7 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 import pandas as pd
@@ -12,6 +13,7 @@ from services.delete_service import DeleteService
 from services.scenario_share_service import ScenarioShareService
 
 st.set_page_config(page_title="MCDA — History", layout="wide")
+apply_theme()
 st.title("Step 7: History, Logs & Export")
 
 guard_page("pages/7_history.py", require_scenario=True)
@@ -233,7 +235,7 @@ else:
             st.success(res.message)
             st.rerun()
         else:
-            st.error(res.message)
+            st.warning(res.message)
 
 st.divider()
 
@@ -261,7 +263,7 @@ if st.button("Generate .mcda export"):
             )
             st.success(f"Ready: **{fname}** ({len(mcda_bytes):,} bytes compressed)")
         except Exception as exc:
-            st.error(f"Export failed: {exc}")
+            st.warning(f"Export failed: {exc}")
 
 st.divider()
 
@@ -269,7 +271,7 @@ st.divider()
 # Danger Zone
 # ----------------------------
 with st.expander("⚠️ Danger zone: delete scenario or decision", expanded=False):
-    st.error("These actions permanently delete inputs and all history. This **cannot** be undone.")
+    st.warning("These actions permanently delete inputs and all history. This **cannot** be undone.")
 
     if decision_id:
         st.caption(f"Current scenario_id: `{scenario_id}`")
@@ -303,7 +305,7 @@ with st.expander("⚠️ Danger zone: delete scenario or decision", expanded=Fal
             st.success(res.message)
             st.switch_page("pages/1_decision_setup.py")
         else:
-            st.error(res.message)
+            st.warning(res.message)
 
     st.markdown("---")
 
@@ -336,6 +338,6 @@ with st.expander("⚠️ Danger zone: delete scenario or decision", expanded=Fal
                 st.success(res.message)
                 st.switch_page("pages/1_decision_setup.py")
             else:
-                st.error(res.message)
+                st.warning(res.message)
     else:
         st.info("Decision ID not found for this scenario.")

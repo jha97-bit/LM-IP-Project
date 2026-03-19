@@ -3,6 +3,7 @@ import bootstrap  # noqa: F401
 import numpy as np
 import pandas as pd
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 import plotly.express as px
@@ -17,6 +18,7 @@ from persistence.repositories.preference_repo import PreferenceRepo
 
 st.set_page_config(page_title="MCDA — Data Input", layout="wide")
 st.title("Step 2: Data Input")
+apply_theme()
 
 guard_page("pages/2_data_input.py", require_scenario=True)
 sync_method_from_scenario()

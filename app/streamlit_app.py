@@ -1,6 +1,7 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 import pandas as pd
 from app.sidebar_nav import render_sidebar
 from sqlalchemy import text
@@ -12,6 +13,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+apply_theme()
 
 # ─── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -100,7 +102,7 @@ except Exception:
 if db_ok:
     st.success("🟢 Database connected", icon=None)
 else:
-    st.error("🔴 Database not reachable — check DATABASE_URL in your .env file")
+    st.warning("Database not reachable — check DATABASE_URL in your .env file")
 
 st.divider()
 
