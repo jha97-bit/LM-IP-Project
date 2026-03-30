@@ -50,12 +50,17 @@ with nav_left:
         st.switch_page("pages/1_decision_setup.py")
 with nav_right:
     can_next = bool(st.session_state.get("data_ready"))
-    next_page = "pages/3a_run_topsis.py" if method_choice == "topsis" else "pages/3b_vft_value_functions.py"
-    next_label = "Next: Run TOPSIS →" if method_choice == "topsis" else "Next: Value Functions →"
+    if method_choice == "vft":
+        next_page = "pages/3b_vft_value_functions.py"
+        next_label = "Next: Value Functions →"
+    else:
+        next_page = "pages/3_run_models.py"
+        next_label = "Next: Run Model →"
     if st.button(next_label, type="primary", disabled=not can_next, key="nav_next_data"):
         st.switch_page(next_page)
 
-method_badge = "📐 TOPSIS" if method_choice == "topsis" else "📈 VFT"
+_badges = {"topsis": "📐 TOPSIS", "vft": "📈 VFT", "ahp": "⚖️ AHP"}
+method_badge = _badges.get(method_choice, method_choice.upper())
 st.caption(f"Method: **{method_badge}** · Fill alternatives, criteria, matrix and preference weights, then Save.")
 st.divider()
 
@@ -453,7 +458,7 @@ with tab_prefs:
                     f"</div></div></div>",
                     unsafe_allow_html=True,
                 )
-            sum_color = "#38a169" if abs(w_sum - 1.0) < 0.001 or auto_normalize else "#e53e3e"
+            sum_color = "#38a169" if abs(w_sum - 1.0) < 0.001 or auto_normalize else "#7c3aed"
             st.markdown(
                 f"<div style='text-align:right;margin-top:8px;font-weight:700;color:{sum_color}'>"
                 f"Σ = {w_sum:.3f} {'✓' if abs(w_sum - 1.0) < 0.001 else '(will normalize)'}</div>",

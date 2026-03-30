@@ -48,7 +48,7 @@ with nav_left:
         st.switch_page("pages/2_data_input.py")
 with nav_right:
     if st.button("Next: Run VFT →", type="primary", key="vf_nav_next"):
-        st.switch_page("pages/3c_run_vft.py")
+        st.switch_page("pages/3_run_models.py")
 
 st.caption("Define how raw values map to utility scores (0-1) for **each criterion**. "
            "Save each one individually, then proceed to Run VFT.")
@@ -285,7 +285,7 @@ for tab_idx, (tab, crit) in enumerate(zip(crit_tabs, existing_crit)):
                 fig.add_trace(go.Scatter(
                     x=[p[0] for p in sorted(plot_pts, key=lambda pt: pt[0])], y=[p[1] for p in sorted(plot_pts, key=lambda pt: pt[0])],
                     mode="markers", name="Control Points",
-                    marker=dict(color="#e53e3e", size=10, symbol="circle"),
+                    marker=dict(color="#6366f1", size=10, symbol="circle"),
                 ))
 
             # Actual alternative points projected onto the same value function.
@@ -326,4 +326,4 @@ with col_prev:
         st.switch_page("pages/2_data_input.py")
 with col_next:
     if st.button("Next: Run VFT →", type="primary", key="vf_bottom_next"):
-        st.switch_page("pages/3c_run_vft.py")
+        st.switch_page("pages/3_run_models.py")

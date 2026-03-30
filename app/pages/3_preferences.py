@@ -11,7 +11,7 @@ apply_theme()
 
 if not method_choice:
     st.title("Step 3: Analysis")
-    st.warning("No method selected. Please go back to Step 1 and choose TOPSIS or VFT.")
+    st.warning("No method selected. Please go back to Step 1 and choose TOPSIS, VFT, or AHP.")
     if st.button("← Go to Step 1"):
         st.switch_page("pages/1_decision_setup.py")
     st.stop()
@@ -19,4 +19,4 @@ if not method_choice:
 if method_choice == "vft":
     st.switch_page("pages/3b_vft_value_functions.py")
 else:
-    st.switch_page("pages/3a_run_topsis.py")
+    st.switch_page("pages/3_run_models.py")

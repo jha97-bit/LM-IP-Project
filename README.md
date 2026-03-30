@@ -1,8 +1,9 @@
-# Integrated MCDA Tool — TOPSIS + VFT
+# Integrated MCDA Tool — TOPSIS + VFT + AHP (reserved)
 
-A Streamlit application for Multi-Criteria Decision Analysis (MCDA) supporting two methods:
+A Streamlit application for Multi-Criteria Decision Analysis (MCDA) with a **unified Run Model** step:
 - **TOPSIS** — Technique for Order of Preference by Similarity to Ideal Solution
 - **VFT** — Value-Focused Thinking with user-defined value functions
+- **AHP** — Analytic Hierarchy Process (scenario type + schema support; pairwise engine not implemented yet)
 
 ---
 
@@ -30,6 +31,8 @@ cp .env.example .env
 
 ```bash
 psql -d mcda_db -f schema/schema.sql
+# If upgrading an existing DB, also apply:
+# psql -d mcda_db -f schema/migrations/20260330_add_ahp_method.sql
 ```
 
 ### 5. Run the app
@@ -48,10 +51,11 @@ streamlit run streamlit_app.py
 | Home | `streamlit_app.py` | Overview and live DB stats |
 | 1 | `1_decision_setup.py` | Create/select Decision & Scenario; import `.mcda` files |
 | 2 | `2_data_input.py` | Add alternatives, criteria, measurement matrix, preference sets |
-| 3 | `3_preferences.py` | Choose method (TOPSIS or VFT) and configure |
-| 3a | `3a_run_topsis.py` | Run TOPSIS analysis |
+| 3 | `3_preferences.py` | Legacy router (redirects to Run Model or Value Functions) |
+| 3 | `3_run_models.py` | **Unified run step** — TOPSIS, VFT, or AHP placeholder |
+| 3a | `3a_run_topsis.py` | Redirect → `3_run_models.py` |
 | 3b | `3b_vft_value_functions.py` | Define VFT value functions per criterion |
-| 3c | `3c_run_vft.py` | Run VFT analysis |
+| 3c | `3c_run_vft.py` | Redirect → `3_run_models.py` |
 | 4 | `4_results.py` | View rankings, charts, and run notes |
 | 5 | `5_sensitivity.py` | Sensitivity analysis and preference set comparison |
 | 6 | `6_report_builder.py` | Build and download a DOCX report |

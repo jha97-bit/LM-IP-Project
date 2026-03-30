@@ -180,7 +180,13 @@ if not creating_new_scenario and selected_scenario in scenario_id_to_meta:
 
 current_method = locked_method or st.session_state.get("method_choice") or "topsis"
 
-method_col1, method_col2 = st.columns(2, gap="large")
+METHOD_LABELS = {
+    "topsis": "TOPSIS",
+    "vft": "VFT — Value Function Transformation",
+    "ahp": "AHP — Analytic Hierarchy Process",
+}
+
+method_col1, method_col2, method_col3 = st.columns(3, gap="large")
 with method_col1:
     if st.button(
         "📐 TOPSIS",
@@ -195,7 +201,7 @@ with method_col1:
 
 with method_col2:
     if st.button(
-        "📈 VFT — Value Function Transformation",
+        "📈 VFT",
         type="primary" if current_method == "vft" else "secondary",
         use_container_width=True,
         disabled=bool(locked_method),
@@ -205,16 +211,28 @@ with method_col2:
         st.rerun()
     st.caption("Utility-based scoring with custom value functions per criterion.")
 
+with method_col3:
+    if st.button(
+        "⚖️ AHP",
+        type="primary" if current_method == "ahp" else "secondary",
+        use_container_width=True,
+        disabled=bool(locked_method),
+        key="method_btn_ahp",
+    ):
+        st.session_state["method_choice"] = "ahp"
+        st.rerun()
+    st.caption("Pairwise comparisons → priority weights (engine coming soon).")
+
 method_choice = st.session_state.get("method_choice")
 if locked_method:
     st.info(
-        f"This scenario is locked to **{locked_method.upper()}**. "
-        "Create a new scenario if you want to use the other method."
+        f"This scenario is locked to **{METHOD_LABELS.get(locked_method, locked_method.upper())}**. "
+        "Create a new scenario if you want to use a different method."
     )
 elif not method_choice:
     st.info("Select an analysis method for the new scenario.")
 else:
-    st.success(f"Method selected: **{'TOPSIS' if method_choice == 'topsis' else 'VFT — Value Function Transformation'}**")
+    st.success(f"Method selected: **{METHOD_LABELS.get(method_choice, method_choice.upper())}**")
 
 st.divider()
 
@@ -265,7 +283,8 @@ if st.session_state.get("scenario_id"):
     st.divider()
     s1, s2, s3 = st.columns(3)
     with s1:
-        st.metric("Method", "TOPSIS" if st.session_state.get("method_choice") == "topsis" else "VFT")
+        _mc = st.session_state.get("method_choice") or "topsis"
+        st.metric("Method", METHOD_LABELS.get(_mc, _mc.upper()))
     with s2:
         st.metric("Decision", decision_id_to_title.get(st.session_state.get("decision_id", ""), "—")[:30])
     with s3:

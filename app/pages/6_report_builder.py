@@ -205,8 +205,8 @@ def lighten_color(color, amount: float = 0.0):
 
 
 BASE_COLORS = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    "#2563eb", "#0d9488", "#059669", "#6366f1", "#7c3aed",
+    "#475569", "#0891b2", "#64748b", "#14b8a6", "#0ea5e9",
 ]
 
 
@@ -345,7 +345,7 @@ def sandbox_compare_chart(base_scores_df: pd.DataFrame, sandbox_scores_df: pd.Da
     x = np.arange(len(merge))
     fig, ax = plt.subplots(figsize=(7.8, 4.2))
     ax.bar(x - 0.18, merge["Baseline"], width=0.36, label="Baseline", color="#1f77b4")
-    ax.bar(x + 0.18, merge["Sandbox"], width=0.36, label="Sandbox", color="#ff7f0e")
+    ax.bar(x + 0.18, merge["Sandbox"], width=0.36, label="Sandbox", color="#0d9488")
     ax.set_xticks(x)
     ax.set_xticklabels(merge["alternative_name"], rotation=25, ha="right", fontsize=9)
     ax.set_ylabel("Score")
@@ -549,7 +549,7 @@ def comparison_distance_chart(dist_df: pd.DataFrame, selection_order: List[str])
         s_neg = [float(sub[sub["alternative_name"] == alt]["s_neg"].iloc[0]) if not sub[sub["alternative_name"] == alt].empty else 0.0 for alt in alt_order]
         base_x = x - 0.375 + i * 2 * width
         ax.bar(base_x, s_pos, width=width, color=lighten_color("#1f77b4", i * 0.16), label=f"{label} | S+")
-        ax.bar(base_x + width, s_neg, width=width, color=lighten_color("#ff7f0e", i * 0.16), label=f"{label} | S-")
+        ax.bar(base_x + width, s_neg, width=width, color=lighten_color("#0d9488", i * 0.16), label=f"{label} | S-")
     ax.set_xticks(x)
     ax.set_xticklabels(alt_order, rotation=25, ha="right", fontsize=9)
     ax.set_title("TOPSIS Distance Decomposition Across Selected Sets", fontsize=11, fontweight="bold")

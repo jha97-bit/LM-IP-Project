@@ -162,7 +162,7 @@ CREATE TABLE public.runs (
     executed_by text,
     input_signature text,
     run_label text,
-    CONSTRAINT runs_method_check CHECK ((method = ANY (ARRAY['topsis'::text, 'vft'::text])))
+    CONSTRAINT runs_method_check CHECK ((method = ANY (ARRAY['topsis'::text, 'vft'::text, 'ahp'::text])))
 );
 
 
@@ -190,7 +190,7 @@ CREATE TABLE public.scenarios (
     method_type text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     created_by text,
-    CONSTRAINT scenarios_method_type_check CHECK ((method_type = ANY (ARRAY['topsis'::text, 'vft'::text])))
+    CONSTRAINT scenarios_method_type_check CHECK ((method_type = ANY (ARRAY['topsis'::text, 'vft'::text, 'ahp'::text])))
 );
 
 

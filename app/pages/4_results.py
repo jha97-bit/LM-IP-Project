@@ -35,10 +35,8 @@ vft_svc = VFTService(engine)
 
 nav_left, nav_right = st.columns(2)
 with nav_left:
-    current_method_for_back = st.session_state.get("method_choice", "topsis")
-    back_page = "pages/3a_run_topsis.py" if current_method_for_back == "topsis" else "pages/3c_run_vft.py"
     if st.button("← Back"):
-        st.switch_page(back_page)
+        st.switch_page("pages/3_run_models.py")
 with nav_right:
     if st.button("Next: Sensitivity Analysis →", type="primary"):
         st.switch_page("pages/5_sensitivity.py")
@@ -404,3 +402,13 @@ criterion to the total score. Tall segments = high contribution (high utility ×
                 "💡 **Note:** Criteria with short segments may be less influential due to low weight or "
                 "low utility scores. Consider reviewing weights if the intended priorities are not reflected."
             )
+
+elif current_method == "ahp":
+    st.warning(
+        "No AHP engine results are stored for this run yet. Pairwise comparison and priority derivation "
+        "are not implemented — switch the scenario to **TOPSIS** or **VFT** in Step 1, or re-run after a future AHP release."
+    )
+else:
+    st.info(f"Results view for method `{current_method}` is not specialized in this build. Showing raw scores if available.")
+    if not scores_df.empty:
+        st.dataframe(scores_df, use_container_width=True)

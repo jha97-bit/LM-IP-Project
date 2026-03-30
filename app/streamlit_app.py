@@ -70,6 +70,16 @@ st.markdown("""
     font-size: 0.75rem;
     font-weight: 600;
   }
+  .badge-ahp {
+    display: inline-block;
+    background: #faf5ff;
+    color: #553c9a;
+    border: 1px solid #d6bcfa;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
   .recent-item {
     display: flex;
     align-items: center;
@@ -91,7 +101,9 @@ render_sidebar("streamlit_app.py")
 
 # ─── Header ────────────────────────────────────────────────────────────────────
 st.title("📊 MCDA Decision Tool")
-st.caption("Multi-Criteria Decision Analysis · TOPSIS and Value Function Transformation (VFT) · Internal Enterprise Tool")
+st.caption(
+    "Multi-Criteria Decision Analysis · TOPSIS, VFT, and AHP (reserved) · Internal Enterprise Tool"
+)
 
 # DB status indicator
 try:
@@ -121,7 +133,7 @@ with left_col:
     st.session_state["user_name"] = (user_name or "").strip()
 
     st.markdown("### 🚀 Start a new analysis")
-    col_t, col_v, col_h = st.columns(3)
+    col_t, col_v, col_a, col_h = st.columns(4)
     with col_t:
         if st.button(
             "📐 TOPSIS",
@@ -140,6 +152,16 @@ with left_col:
             disabled=not st.session_state["user_name"],
         ):
             st.session_state["method_choice"] = "vft"
+            st.switch_page("pages/1_decision_setup.py")
+
+    with col_a:
+        if st.button(
+            "⚖️ AHP",
+            type="primary",
+            use_container_width=True,
+            disabled=not st.session_state["user_name"],
+        ):
+            st.session_state["method_choice"] = "ahp"
             st.switch_page("pages/1_decision_setup.py")
 
     with col_h:
@@ -164,8 +186,9 @@ with right_col:
                 n_runs = conn.execute(text("SELECT COUNT(*) FROM runs")).scalar() or 0
                 n_topsis = conn.execute(text("SELECT COUNT(*) FROM runs WHERE method='topsis'")).scalar() or 0
                 n_vft = conn.execute(text("SELECT COUNT(*) FROM runs WHERE method='vft'")).scalar() or 0
+                n_ahp = conn.execute(text("SELECT COUNT(*) FROM runs WHERE method='ahp'")).scalar() or 0
         except Exception:
-            n_dec = n_scen = n_runs = n_topsis = n_vft = 0
+            n_dec = n_scen = n_runs = n_topsis = n_vft = n_ahp = 0
 
         st.markdown("### 📊 Workspace Summary")
         c1, c2 = st.columns(2)
@@ -185,7 +208,7 @@ with right_col:
             """, unsafe_allow_html=True)
 
         st.markdown("")
-        c3, c4 = st.columns(2)
+        c3, c4, c5 = st.columns(3)
         with c3:
             st.markdown(f"""
             <div class="stat-card">
@@ -200,12 +223,19 @@ with right_col:
               <div class="stat-lbl">VFT Runs</div>
             </div>
             """, unsafe_allow_html=True)
+        with c5:
+            st.markdown(f"""
+            <div class="stat-card">
+              <div class="stat-num">{n_ahp}</div>
+              <div class="stat-lbl">AHP Runs</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 st.divider()
 
 # ─── Methods overview ─────────────────────────────────────────────────────────
 st.markdown("### 🧮 Analysis Methods")
-mc1, mc2 = st.columns(2, gap="large")
+mc1, mc2, mc3 = st.columns(3, gap="large")
 
 with mc1:
     st.markdown("""
@@ -244,6 +274,25 @@ with mc2:
     </div>
     """, unsafe_allow_html=True)
 
+with mc3:
+    st.markdown("""
+    <div class="method-card">
+      <h3>⚖️ AHP — Analytic Hierarchy Process</h3>
+      <span class="badge-ahp">Pairwise comparisons</span>
+      <p style="margin-top: 1rem;">Structured priority derivation from pairwise judgments (e.g. 1–9 scale).
+      The app reserves <b>AHP</b> as a scenario type and in the database schema; the full pairwise engine
+      and consistency checks are planned for a future release.</p>
+      <b>Steps (planned):</b>
+      <ol style="margin:0; padding-left: 1.2rem;">
+        <li>Build hierarchy (goal → criteria → alternatives)</li>
+        <li>Enter pairwise comparison matrices</li>
+        <li>Check consistency ratio (CR)</li>
+        <li>Derive local weights via eigenvector</li>
+        <li>Synthesize global priorities and rank</li>
+      </ol>
+    </div>
+    """, unsafe_allow_html=True)
+
 st.divider()
 
 # ─── Recent Activity ──────────────────────────────────────────────────────────
@@ -266,8 +315,12 @@ if db_ok:
 
         if recent:
             for run in recent:
-                badge = f'<span class="badge-topsis">TOPSIS</span>' if run["method"] == "topsis" \
-                    else f'<span class="badge-vft">VFT</span>'
+                if run["method"] == "topsis":
+                    badge = '<span class="badge-topsis">TOPSIS</span>'
+                elif run["method"] == "vft":
+                    badge = '<span class="badge-vft">VFT</span>'
+                else:
+                    badge = '<span class="badge-ahp">AHP</span>'
                 label = run.get("run_label") or run["run_id"][:12] + "…"
                 by = f" · {run['executed_by']}" if run.get("executed_by") else ""
                 ts = str(run["executed_at"])[:16]

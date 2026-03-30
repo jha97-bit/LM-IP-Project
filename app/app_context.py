@@ -6,7 +6,7 @@ from persistence.repositories.scenario_repo import ScenarioRepo
 FLOW_TOPSIS = [
     ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
     ("data", "Data Input", "pages/2_data_input.py", "📊"),
-    ("run_topsis", "Run TOPSIS", "pages/3a_run_topsis.py", "📐"),
+    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
     ("results", "Results", "pages/4_results.py", "🏆"),
     ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
     ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
@@ -17,7 +17,17 @@ FLOW_VFT = [
     ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
     ("data", "Data Input", "pages/2_data_input.py", "📊"),
     ("value_functions", "Value Functions", "pages/3b_vft_value_functions.py", "📈"),
-    ("run_vft", "Run VFT", "pages/3c_run_vft.py", "▶️"),
+    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
+    ("results", "Results", "pages/4_results.py", "🏆"),
+    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
+    ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
+    ("history", "History", "pages/7_history.py", "🕘"),
+]
+
+FLOW_AHP = [
+    ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
+    ("data", "Data Input", "pages/2_data_input.py", "📊"),
+    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
     ("results", "Results", "pages/4_results.py", "🏆"),
     ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
     ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
@@ -51,7 +61,12 @@ def get_active_method() -> str | None:
 
 
 def get_active_flow():
-    return FLOW_VFT if get_active_method() == "vft" else FLOW_TOPSIS
+    m = get_active_method()
+    if m == "vft":
+        return FLOW_VFT
+    if m == "ahp":
+        return FLOW_AHP
+    return FLOW_TOPSIS
 
 
 def get_allowed_page_paths():

@@ -175,6 +175,13 @@ def apply_theme():
           color: #2563EB !important;
           fill: #2563EB !important;
         }
+
+        /* Alerts: neutral chrome instead of default red / amber boxes */
+        div[data-testid="stAlert"] {
+          background-color: #f8fafc !important;
+          border: 1px solid #cbd5e1 !important;
+          border-left: 4px solid #4338ca !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
