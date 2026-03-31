@@ -10,19 +10,32 @@ def render_sidebar(current_page_path: str | None = None):
 
     flow = get_active_flow()
 
-    st.sidebar.markdown("## MCDA Flow")
+    st.sidebar.markdown("## MCDA FLOW")
     st.sidebar.caption(f"Method: {method.upper()}")
     st.sidebar.divider()
 
-    for idx, (_, label, path, icon) in enumerate(flow, start=1):
+    current_idx = None
+    for idx, (_, _, path, _) in enumerate(flow, start=1):
         if path == current_page_path:
-            st.sidebar.markdown(f"**Step {idx}. {icon} {label}**")
+            current_idx = idx
+            break
+    if current_idx is not None:
+        st.sidebar.caption(f"Step {current_idx} of {len(flow)}")
+        st.sidebar.progress(current_idx / len(flow))
+        st.sidebar.divider()
+
+    for idx, (_, label, path, _) in enumerate(flow, start=1):
+        if path == current_page_path:
+            st.sidebar.markdown(
+                f"<div class='sidebar-active-item'>STEP {idx}. {label}</div>",
+                unsafe_allow_html=True,
+            )
         else:
-            st.sidebar.page_link(path, label=f"Step {idx}. {label}", icon=icon)
+            st.sidebar.page_link(path, label=f"STEP {idx}. {label.upper()}")
 
     st.sidebar.divider()
 
-    if st.sidebar.button("Reset / Change Method", use_container_width=True):
+    if st.sidebar.button("RESET / CHANGE METHOD", use_container_width=True):
         for key in ["scenario_id", "decision_id", "method_choice", "selected_run_id"]:
             if key in st.session_state:
                 del st.session_state[key]

@@ -8,6 +8,7 @@ import hashlib
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.io as pio
 import streamlit as st
 from sqlalchemy import text
 
@@ -25,19 +26,53 @@ from services.vft_service import VFTService
 
 
 ENGINE_VERSION_TOPSIS = "core=0.1.0"
+pio.templates.default = "plotly_white"
+px.defaults.template = "plotly_white"
+
+
+def _light_df_style(df: pd.DataFrame, fmt=None):
+    styler = df.style
+    if fmt:
+        styler = styler.format(fmt)
+    return styler.set_table_styles(
+        [
+            {"selector": "table", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B")]},
+            {"selector": "thead th", "props": [("background-color", "#F1F5F9"), ("color", "#1E293B"), ("font-weight", "600")]},
+            {"selector": "tbody td", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B"), ("border-bottom", "1px solid #E2E8F0")]},
+            {"selector": "tr:hover td", "props": [("background-color", "rgba(42,157,143,0.1)")]},
+        ]
+    )
+
+
+def _render_light_table(df: pd.DataFrame, fmt: str = "{:.4f}") -> None:
+    st.markdown(
+        """
+        <style>
+        .mcda-light-table { width: 100%; border-collapse: collapse; background: #FFFFFF; color: #1E293B; }
+        .mcda-light-table th { background: #F1F5F9; color: #1E293B; font-weight: 700; border: 1px solid #E2E8F0; padding: 8px 10px; text-align: left; }
+        .mcda-light-table td { background: #FFFFFF; color: #1E293B; border: 1px solid #E2E8F0; padding: 8px 10px; }
+        .mcda-light-table tr:hover td { background: #EEF6F5; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    styled = df.copy()
+    for col in styled.columns:
+        if pd.api.types.is_numeric_dtype(styled[col]):
+            styled[col] = styled[col].map(lambda v: fmt.format(float(v)))
+    st.markdown(styled.to_html(index=False, classes="mcda-light-table", escape=False), unsafe_allow_html=True)
 
 
 def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
-    st.subheader("📐 TOPSIS")
+    st.subheader("TOPSIS")
     st.caption("Preview the TOPSIS run against your data, then save to persist results.")
     nav_left, nav_right = st.columns(2)
     with nav_left:
-        if st.button("← Step 2: Data Input", key="topsis_nav_back"):
+        if st.button("Step 2: Data Input", key="topsis_nav_back"):
             st.switch_page("pages/2_data_input.py")
     with nav_right:
-        if st.button("Next: Results →", type="primary", key="topsis_nav_next"):
+        if st.button("Next: Results", type="primary", key="topsis_nav_next"):
             st.switch_page("pages/4_results.py")
-    st.divider()
 
     with engine.begin() as conn:
         prefs = conn.execute(
@@ -101,13 +136,14 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
 
     st.subheader("Validation")
     if ok:
-        st.success("✅ Scenario data is complete and ready to run.")
+        st.success("Scenario data is complete and ready to run.")
     else:
         for msg in issues:
             st.warning(msg)
         st.stop()
 
-    with st.expander("View input summary", expanded=False):
+    show_inputs = st.checkbox("Show Input Summary", value=False, key=f"show_input_summary_{scenario_id}_{pref_id}")
+    if show_inputs:
         meas_repo = MeasurementRepo(engine)
         pref_repo = PreferenceRepo(engine)
         mat = meas_repo.load_matrix_ui(scenario_id)
@@ -145,14 +181,13 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
             return None, None
         return str(row["run_id"]), dict(row)
 
-    st.divider()
     st.subheader("Run Preview")
 
-    colA, colB = st.columns(2)
+    colA, colB, colC = st.columns([2, 2, 4])
     with colA:
-        run_preview = st.button("▶ Preview Run", type="primary", key="topsis_preview_btn")
+        run_preview = st.button("Preview Run", type="primary", key="topsis_preview_btn")
     with colB:
-        if st.button("✕ Clear Preview", key="topsis_clear_preview"):
+        if st.button("Clear Preview", key="topsis_clear_preview"):
             st.session_state.pop("topsis_preview", None)
             st.session_state.pop("dup_check", None)
             st.rerun()
@@ -197,11 +232,21 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
             title="TOPSIS Score C* Preview",
             labels={"alternative_name": "Alternative", "score": "C* Score"},
         )
-        fig.update_layout(showlegend=False, height=340, margin=dict(l=10, r=10, t=40, b=10))
+        fig.update_layout(
+            template="plotly_white",
+            showlegend=False,
+            height=360,
+            plot_bgcolor="#F8FAFC",
+            paper_bgcolor="#FFFFFF",
+            font=dict(color="#334155", size=13),
+            title_font=dict(color="#1E293B", size=16),
+            xaxis=dict(linecolor="#94A3B8", gridcolor="rgba(203,213,225,0.5)"),
+            yaxis=dict(linecolor="#94A3B8", gridcolor="rgba(203,213,225,0.5)"),
+            margin=dict(l=10, r=10, t=40, b=8),
+        )
         st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(scores_df, use_container_width=True)
+        _render_light_table(scores_df[["alternative_name", "score", "rank"]].rename(columns={"alternative_name": "Alternative"}), "{:.4f}")
 
-    st.divider()
     st.subheader("Save Results")
 
     save_disabled = preview is None
@@ -209,14 +254,14 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
 
     if preview and dup_check and dup_check.get("existing_run_id"):
         meta = dup_check.get("existing_meta") or {}
-        st.warning("⚠ Identical run already exists (same matrix + weights fingerprint).")
+        st.warning("An identical run already exists (same matrix + weights fingerprint).")
         st.caption(
             f"Existing run: {dup_check['existing_run_id'][:8]}… by {meta.get('executed_by', '?')} "
             f"at {str(meta.get('executed_at', '?'))[:16]}"
         )
         overwrite = st.checkbox("Overwrite existing run instead of creating a new one", value=True)
 
-    if st.button("💾 Save Results to Database", type="primary", disabled=save_disabled, key="topsis_save"):
+    if st.button("Save Results To Database", type="primary", disabled=save_disabled, key="topsis_save"):
         if preview is None:
             st.warning("Run a preview first.")
             st.stop()
@@ -323,12 +368,12 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
         st.session_state["last_run_id"] = run_id
         st.session_state.pop("topsis_preview", None)
         st.session_state.pop("dup_check", None)
-        st.toast("✅ TOPSIS run saved! Redirecting to Results…", icon="🏆")
+        st.toast("TOPSIS run saved. Redirecting to Results...", icon="✅")
         st.switch_page("pages/4_results.py")
 
 
 def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
-    st.subheader("📈 VFT — Value Function Transformation")
+    st.subheader("VFT — Value Function Transformation")
     st.caption("Preview the VFT scoring, then save to persist results.")
 
     alt_repo = AlternativeRepo(engine)
@@ -339,10 +384,10 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
 
     nav_left, nav_right = st.columns(2)
     with nav_left:
-        if st.button("← Step 3: Value Functions", key="vft_nav_back"):
+        if st.button("Step 3: Value Functions", key="vft_nav_back"):
             st.switch_page("pages/3b_vft_value_functions.py")
     with nav_right:
-        if st.button("Next: Results →", type="primary", key="vft_nav_next"):
+        if st.button("Next: Results", type="primary", key="vft_nav_next"):
             st.switch_page("pages/4_results.py")
     st.divider()
 
@@ -491,7 +536,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
     st.divider()
     st.subheader("Run Preview")
 
-    if st.button("▶ Preview VFT Scoring", type="primary", key="vft_preview_btn"):
+    if st.button("Preview VFT Scoring", type="primary", key="vft_preview_btn"):
         utility_matrix, weighted_matrix, total_scores = compute_preview()
         st.session_state["vft_preview"] = {
             "utility_matrix": utility_matrix,
@@ -500,7 +545,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         }
         st.rerun()
 
-    if st.button("✕ Clear Preview", key="vft_clear_preview"):
+    if st.button("Clear Preview", key="vft_clear_preview"):
         st.session_state.pop("vft_preview", None)
         st.rerun()
 
@@ -512,6 +557,11 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         weighted_matrix = preview["weighted_matrix"]
 
         sorted_alts = sorted(total_scores.items(), key=lambda x: x[1], reverse=True)
+        teal_rank_colors = ["#2A9D8F", "#52B7A5", "#A7DAD0", "#74C7B8", "#8ED3C7"]
+        alt_color_map = {
+            alt: teal_rank_colors[i] if i < len(teal_rank_colors) else "#A7DAD0"
+            for i, (alt, _) in enumerate(sorted_alts)
+        }
 
         st.subheader("Preview Ranking")
         rank_df = pd.DataFrame(
@@ -522,25 +572,71 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
             pd.DataFrame({"Alternative": [x[0] for x in sorted_alts], "Score": [x[1] for x in sorted_alts]}),
             x="Alternative",
             y="Score",
-            color="Score",
-            color_continuous_scale="Greens",
+            color="Alternative",
+            color_discrete_map=alt_color_map,
             title="VFT Total Score Preview",
         )
-        bar_fig.update_layout(height=380)
+        bar_fig.update_traces(
+            marker_line_color="#1E3A5F",
+            marker_line_width=1.2,
+            hovertemplate="<b>%{x}</b><br>Score: %{y:.4f}<extra></extra>",
+        )
+        bar_fig.update_layout(
+            template="plotly_white",
+            height=400,
+            plot_bgcolor="#F8FAFC",
+            paper_bgcolor="#FFFFFF",
+            font=dict(color="#334155", size=13),
+            title_font=dict(color="#1E293B", size=16),
+            xaxis=dict(
+                title=None,
+                tickfont=dict(color="#334155", size=13),
+                linecolor="#94A3B8",
+                gridcolor="rgba(203,213,225,0.5)",
+                zeroline=False,
+            ),
+            yaxis=dict(
+                title="Score",
+                title_font=dict(color="#334155", size=14),
+                tickfont=dict(color="#334155", size=13),
+                linecolor="#94A3B8",
+                gridcolor="rgba(203,213,225,0.5)",
+                zeroline=False,
+            ),
+            legend=dict(
+                title=None,
+                bgcolor="rgba(255,255,255,0.95)",
+                bordercolor="#E2E8F0",
+                borderwidth=1,
+                font=dict(color="#1E293B", size=12),
+            ),
+            margin=dict(l=20, r=20, t=48, b=20),
+        )
         st.plotly_chart(bar_fig, use_container_width=True)
 
-        st.dataframe(rank_df, use_container_width=True, hide_index=True)
+        rank_df_display = (
+            rank_df.style.hide(axis="index")
+            .set_table_styles(
+                [
+                    {"selector": "table", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B")]},
+                    {"selector": "th", "props": [("background-color", "#F1F5F9"), ("color", "#1E293B"), ("font-size", "13px"), ("font-weight", "700")]},
+                    {"selector": "td", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B"), ("font-size", "13px"), ("border-bottom", "1px solid #E2E8F0")]},
+                    {"selector": "tr:hover td", "props": [("background-color", "rgba(42,157,143,0.1)")]},
+                ]
+            )
+        )
+        st.dataframe(rank_df_display, use_container_width=True)
 
         st.subheader("Utility Matrix (0-1)")
         util_df = pd.DataFrame(utility_matrix).T
         util_df = util_df[crit_names]
-        st.dataframe(util_df.style.format("{:.4f}"), use_container_width=True)
+        _render_light_table(util_df.reset_index(drop=True), "{:.4f}")
 
         st.subheader("Weighted Contribution Matrix")
         weighted_df = pd.DataFrame(weighted_matrix).T
         weighted_df = weighted_df[crit_names]
         weighted_df["Total"] = weighted_df.sum(axis=1)
-        st.dataframe(weighted_df.style.format("{:.4f}"), use_container_width=True)
+        _render_light_table(weighted_df.reset_index(drop=True), "{:.4f}")
 
         st.subheader("Contribution by Criterion")
         contrib_long = (
@@ -558,13 +654,24 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
             title="Weighted Score Composition by Alternative",
             color_discrete_sequence=DISCRETE_PALETTE,
         )
-        stack_fig.update_layout(barmode="stack", height=420)
+        stack_fig.update_layout(
+            template="plotly_white",
+            barmode="stack",
+            height=420,
+            plot_bgcolor="#F8FAFC",
+            paper_bgcolor="#FFFFFF",
+            font=dict(color="#334155", size=13),
+            xaxis=dict(gridcolor="rgba(203,213,225,0.5)", linecolor="#94A3B8"),
+            yaxis=dict(gridcolor="rgba(203,213,225,0.5)", linecolor="#94A3B8"),
+            legend=dict(bgcolor="rgba(255,255,255,0.95)", bordercolor="#E2E8F0", borderwidth=1),
+            margin=dict(l=20, r=20, t=48, b=20),
+        )
         st.plotly_chart(stack_fig, use_container_width=True)
 
         st.divider()
         st.subheader("Save Run")
 
-        if st.button("💾 Save VFT Run", type="primary", key="vft_save"):
+        if st.button("Save VFT Run", type="primary", key="vft_save"):
             alt_map = {a["name"]: a["alternative_id"] for a in existing_alts}
             crit_map = {c["name"]: c["criterion_id"] for c in existing_crit}
             normalized_weights = {
@@ -597,15 +704,15 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
     st.divider()
     col_prev, col_next = st.columns(2)
     with col_prev:
-        if st.button("← Back to Value Functions", key="vft_run_back_bottom"):
+        if st.button("Back To Value Functions", key="vft_run_back_bottom"):
             st.switch_page("pages/3b_vft_value_functions.py")
     with col_next:
-        if st.button("Go to Results →", key="vft_run_results_bottom"):
+        if st.button("Go To Results", key="vft_run_results_bottom"):
             st.switch_page("pages/4_results.py")
 
 
 def render_ahp_placeholder() -> None:
-    st.subheader("⚖️ AHP — Analytic Hierarchy Process")
+    st.subheader("AHP — Analytic Hierarchy Process")
     st.info(
         "Pairwise comparison matrices, consistency checks, and eigenvector-derived weights are **not "
         "implemented in this build**. The schema reserves `ahp` as a method type for future integration "
@@ -615,8 +722,8 @@ def render_ahp_placeholder() -> None:
     )
     nav_left, nav_right = st.columns(2)
     with nav_left:
-        if st.button("← Step 2: Data Input", key="ahp_nav_back"):
+        if st.button("Step 2: Data Input", key="ahp_nav_back"):
             st.switch_page("pages/2_data_input.py")
     with nav_right:
-        if st.button("Next: Results →", type="primary", key="ahp_nav_next"):
+        if st.button("Next: Results", type="primary", key="ahp_nav_next"):
             st.switch_page("pages/4_results.py")

@@ -59,9 +59,11 @@ with nav_right:
     if st.button(next_label, type="primary", disabled=not can_next, key="nav_next_data"):
         st.switch_page(next_page)
 
-_badges = {"topsis": "📐 TOPSIS", "vft": "📈 VFT", "ahp": "⚖️ AHP"}
+_badges = {"topsis": "TOPSIS", "vft": "VFT", "ahp": "AHP"}
 method_badge = _badges.get(method_choice, method_choice.upper())
 st.caption(f"Method: **{method_badge}** · Fill alternatives, criteria, matrix and preference weights, then Save.")
+st.caption("Step 2 of 7 — build alternatives/criteria, then matrix, then preference weights.")
+st.progress(2 / 7)
 st.divider()
 
 # ─── Load existing state ───────────────────────────────────────────────────────
@@ -69,15 +71,23 @@ existing_alts = alt_repo.list_by_scenario(scenario_id)
 existing_crit = crit_repo.list_by_scenario(scenario_id)
 alt_names_existing = [a["name"] for a in existing_alts] if existing_alts else []
 
-tab_alts, tab_matrix, tab_prefs = st.tabs(["🧩 Alternatives & Criteria", "📊 Performance Matrix", "⚖️ Preference Sets & Weights"])
+tab_alts, tab_matrix, tab_prefs = st.tabs(["ALTERNATIVES & CRITERIA", "PERFORMANCE MATRIX", "PREFERENCE SETS & WEIGHTS"])
 
 # ══════════════════════════════════════════════════════════════════════
 # TAB 1: Alternatives & Criteria
 # ══════════════════════════════════════════════════════════════════════
 with tab_alts:
+    st.markdown(
+        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>"
+        "<span style='font-weight:600;color:#1E3A5F'>Input Structure</span>"
+        "<span style='font-size:0.9rem;color:#475569'>Save → open <b>Performance Matrix</b> tab</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
     col_a, col_b = st.columns(2, gap="large")
 
     with col_a:
+        st.markdown("<div class='input-card'>", unsafe_allow_html=True)
         st.subheader("Alternatives")
         st.caption("Each row is one option to evaluate.")
         default_alts = alt_names_existing or ["Option A", "Option B", "Option C"]
@@ -85,8 +95,10 @@ with tab_alts:
         alts_df = st.data_editor(alts_df, num_rows="dynamic", use_container_width=True, key="alts_editor_step2")
         alt_names = [str(x).strip() for x in alts_df["Alternative Name"].dropna().tolist() if str(x).strip()]
         alt_names = list(dict.fromkeys(alt_names))
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_b:
+        st.markdown("<div class='input-card'>", unsafe_allow_html=True)
         st.subheader("Criteria")
         UNIT_OPTIONS = ["score","points","rank","rating","USD","percent","days","hours",
                         "minutes","ms","seconds","kg","g","km","m","Yes/No","count","other"]
@@ -129,6 +141,7 @@ with tab_alts:
                 return "benefit" if d in ("Maximize", "benefit") else "cost"
         else:
             st.caption("For TOPSIS: benefit = higher is better; cost = lower is better.")
+            st.caption("ℹ️ Benefit means maximize. Cost means minimize.")
             DIRECTION_OPTIONS = ["benefit", "cost"]
 
             if existing_crit:
@@ -150,13 +163,18 @@ with tab_alts:
             crit_df = st.data_editor(
                 crit_df, num_rows="dynamic", use_container_width=True, key="crit_editor_step2",
                 column_config={
-                    "Direction": st.column_config.SelectboxColumn("Direction", options=DIRECTION_OPTIONS),
+                    "Direction": st.column_config.SelectboxColumn(
+                        "Direction",
+                        options=DIRECTION_OPTIONS,
+                        help="Benefit = larger values preferred. Cost = smaller values preferred.",
+                    ),
                     "Scale Type": st.column_config.SelectboxColumn("Scale Type", options=SCALE_OPTIONS),
                     "Unit": st.column_config.SelectboxColumn("Unit", options=UNIT_OPTIONS),
                     "Description": st.column_config.TextColumn("Description"),
                 },
             )
             def _vft_to_dir(d): return d  # already benefit/cost
+        st.markdown("</div>", unsafe_allow_html=True)
 
     crit_rows = []
     for _, r in crit_df.iterrows():
@@ -177,9 +195,9 @@ with tab_alts:
     crit_names = list(dict.fromkeys([c["name"] for c in crit_rows]))
 
     st.markdown("")
-    save_col, hint_col = st.columns([2, 4])
+    save_col, hint_col, next_col = st.columns([2, 3, 2])
     with save_col:
-        if st.button("💾 Save Alternatives & Criteria", type="primary", key="btn_save_alt_crit"):
+        if st.button("Save Alternatives & Criteria", type="primary", key="btn_save_alt_crit"):
             if not alt_names:
                 st.error("Add at least 1 alternative.")
             elif not crit_rows:
@@ -190,10 +208,13 @@ with tab_alts:
                 alt_repo.delete_missing(scenario_id, alt_names)
                 crit_repo.delete_missing(scenario_id, crit_names)
                 st.session_state["data_ready"] = False
-                st.toast("✅ Alternatives & Criteria saved!", icon="🧩")
+                st.toast("Alternatives & Criteria saved.", icon="✅")
                 st.rerun()
     with hint_col:
         st.caption("After saving, go to the **Performance Matrix** tab to enter values.")
+    with next_col:
+        st.caption("Then continue to matrix input.")
+        st.button("Open Performance Matrix Tab", disabled=True, key="matrix_tab_hint")
 
 # ─── Reload after possible save ───────────────────────────────────────────────
 existing_alts = alt_repo.list_by_scenario(scenario_id)
@@ -230,7 +251,7 @@ with tab_matrix:
             key=f"matrix_editor_step2_{scenario_id}",
         )
 
-        if st.button("💾 Save Matrix", type="primary", key="btn_save_matrix"):
+        if st.button("Save Matrix", type="primary", key="btn_save_matrix"):
             if matrix_ui.isna().any().any():
                 st.error("Matrix has missing cells — fill all values.")
             else:
@@ -244,7 +265,7 @@ with tab_matrix:
                     ])
                     meas_repo.replace_all_for_scenario(scenario_id, alt_map, crit_map, matrix_numeric)
                     st.session_state["data_ready"] = bool(st.session_state.get("preference_set_id"))
-                    st.toast("✅ Performance Matrix saved!", icon="📊")
+                    st.toast("Performance Matrix saved.", icon="✅")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Save failed: {e}")
@@ -299,6 +320,7 @@ with tab_prefs:
                     created_by=user_name,
                 )
                 st.session_state["preference_set_id"] = pref_id
+                st.session_state[f"force_equal_preset_{pref_id}"] = True
                 st.toast(f"✅ Preference set '{new_pref_name}' created!", icon="⚖️")
                 st.rerun()
         else:
@@ -310,10 +332,12 @@ with tab_prefs:
             st.stop()
 
         st.divider()
-        st.subheader("⚖️ Weight Distribution")
+        st.subheader("Weight Distribution")
         existing_weights = pref_repo.load_weights_by_criterion_name(pref_id)
 
         n_crits = len(crit_names_db)
+        equal_preset = 1.0 / max(1, n_crits)
+        force_equal_preset = st.session_state.pop(f"force_equal_preset_{pref_id}", False)
 
         # ── Build weights from session state with two-way slider <-> number sync ──
         weights_by_name = {}
@@ -335,20 +359,30 @@ with tab_prefs:
             st.session_state[number_key] = new_val
 
         for cname in crit_names_db:
-            cur_w = float(existing_weights.get(cname, 1.0 / max(1, n_crits)))
+            cur_w = float(equal_preset if force_equal_preset else existing_weights.get(cname, equal_preset))
             base_key = f"w_{pref_id}_{cname}"
             slider_key = f"wslider_{pref_id}_{cname}"
             number_key = f"wnum_{pref_id}_{cname}"
             init_val = min(max(cur_w, 0.0), 1.0)
 
-            if base_key not in st.session_state:
+            if force_equal_preset or base_key not in st.session_state:
                 st.session_state[base_key] = init_val
-            if slider_key not in st.session_state:
+            if force_equal_preset or slider_key not in st.session_state:
                 st.session_state[slider_key] = float(st.session_state[base_key])
-            if number_key not in st.session_state:
+            if force_equal_preset or number_key not in st.session_state:
                 st.session_state[number_key] = float(st.session_state[base_key])
 
-        auto_normalize = st.checkbox("Auto-normalize to sum = 1", value=True, key=f"autonorm_{pref_id}")
+        preset_col, normalize_col = st.columns([2, 2])
+        with preset_col:
+            if st.button("Reset To Equal Preset", key=f"btn_equal_preset_{pref_id}"):
+                for cname in crit_names_db:
+                    st.session_state[f"w_{pref_id}_{cname}"] = equal_preset
+                    st.session_state[f"wslider_{pref_id}_{cname}"] = equal_preset
+                    st.session_state[f"wnum_{pref_id}_{cname}"] = equal_preset
+                st.toast("Preset applied: all criteria set to equal weights.", icon="✅")
+                st.rerun()
+        with normalize_col:
+            auto_normalize = st.checkbox("Auto-normalize to sum = 1", value=True, key=f"autonorm_{pref_id}")
 
         wt_left, wt_right = st.columns([3, 2], gap="large")
 
@@ -428,14 +462,15 @@ with tab_prefs:
                                   showarrow=False, font_color="#2d3748")],
                 margin=dict(l=10, r=10, t=10, b=10),
                 height=280,
+                width=460,
                 showlegend=False,
                 paper_bgcolor="rgba(0,0,0,0)",
             )
-            st.plotly_chart(fig, use_container_width=True, key=f"pie_{pref_id}")
+            st.plotly_chart(fig, use_container_width=False, key=f"pie_{pref_id}")
 
             # ── Ranked list with color legend matching the donut chart ──
             w_pairs = sorted(zip(crit_names_db, w_display), key=lambda x: x[1], reverse=True)
-            medal = ["🥇", "🥈", "🥉"]
+            medal = ["#1", "#2", "#3"]
             st.markdown("<div style='margin-top:4px'>", unsafe_allow_html=True)
             for i, (cname, wval) in enumerate(w_pairs):
                 icon = medal[i] if i < 3 else f"#{i+1}"
@@ -469,7 +504,7 @@ with tab_prefs:
         st.markdown("")
         save_w_col, tip_col = st.columns([2, 4])
         with save_w_col:
-            if st.button("💾 Save Weights", type="primary", key=f"btn_save_weights_{pref_id}"):
+            if st.button("Save Weights", type="primary", key=f"btn_save_weights_{pref_id}"):
                 w_vals = np.array([float(weights_by_name.get(c, 0.0)) for c in crit_names_db])
                 if auto_normalize and w_vals.sum() > 0:
                     w_vals = w_vals / w_vals.sum()
@@ -486,7 +521,7 @@ with tab_prefs:
                 mat = meas_repo.load_matrix_ui(scenario_id)
                 if not mat.empty and not mat.isna().any().any():
                     st.session_state["data_ready"] = True
-                st.toast("✅ Weights saved! You can proceed to the next step.", icon="⚖️")
+                st.toast("Weights saved. You can proceed to the next step.", icon="✅")
                 st.rerun()
         with tip_col:
             st.caption("💡 Tip: Create multiple preference sets to model different stakeholder perspectives.")

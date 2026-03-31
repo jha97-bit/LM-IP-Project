@@ -9,7 +9,7 @@ from persistence.engine import get_engine
 
 st.set_page_config(page_title="MCDA — Run Model", layout="wide")
 apply_theme()
-st.title("Step 3: Run Model")
+st.title("STEP 3: RUN MODEL")
 
 guard_page("pages/3_run_models.py", require_scenario=True)
 sync_method_from_scenario()
@@ -22,12 +22,11 @@ method_choice = st.session_state.get("method_choice", "topsis")
 
 if not scenario_id:
     st.warning("No scenario selected — go to Step 1.")
-    if st.button("← Go to Step 1"):
+    if st.button("Go To Step 1"):
         st.switch_page("pages/1_decision_setup.py")
     st.stop()
 
 st.caption(f"Scenario method: **{method_choice.upper()}**")
-st.divider()
 
 if method_choice == "topsis":
     render_topsis_run(engine, scenario_id, user_name)

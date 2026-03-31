@@ -20,6 +20,74 @@ from services.vft_service import VFTService
 st.set_page_config(page_title="MCDA — Results", layout="wide")
 apply_theme()
 st.title("Step 4: Results")
+st.markdown(
+    """
+    <style>
+    .results-header-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px;
+      align-items: center;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 20px;
+      margin: 8px 0 10px 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .results-header-item .lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.45px;
+      font-weight: 500;
+      color: #64748B;
+      line-height: 1.2;
+      margin-bottom: 3px;
+    }
+    .results-header-item .val {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1E293B;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .results-divider {
+      height: 1px;
+      background: #E2E8F0;
+      margin: 12px 0 14px 0;
+    }
+    .run-form-section {
+      max-width: 900px;
+      margin: 0 auto 10px auto;
+      padding: 16px 20px;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .run-form-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .run-form-row:last-child {
+      margin-bottom: 0;
+    }
+    .run-form-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      font-family: Inter, "Open Sans", sans-serif;
+      line-height: 1.3;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 guard_page("pages/4_results.py", require_scenario=True)
 sync_method_from_scenario()
@@ -47,6 +115,23 @@ st.divider()
 # ─── Selectors ────────────────────────────────────────────────────────────────
 st.subheader("Select Run to View")
 
+
+def _inline_single_pick(label: str, options: list[str], default_value: str, format_func, key: str) -> str:
+    col_label, col_input = st.columns([1, 6])
+    with col_label:
+        st.markdown(f"<div class='run-form-label'>{label}</div>", unsafe_allow_html=True)
+    with col_input:
+        picked = st.multiselect(
+            label,
+            options=options,
+            default=[default_value] if default_value in options else [options[0]],
+            max_selections=1,
+            format_func=format_func,
+            key=key,
+            label_visibility="collapsed",
+        )
+    return picked[0] if picked else options[0]
+
 with engine.begin() as conn:
     decisions = conn.execute(
         text("SELECT decision_id::text, title FROM decisions ORDER BY created_at DESC LIMIT 200")
@@ -61,15 +146,13 @@ decision_ids = [d["decision_id"] for d in decisions]
 dec_id_to_title = {d["decision_id"]: d["title"] for d in decisions}
 
 default_dec = st.session_state.get("decision_id") or decision_ids[0]
-picked_dec = st.multiselect(
+decision_id = _inline_single_pick(
     "Decision",
-    options=decision_ids,
-    default=[default_dec] if default_dec in decision_ids else [decision_ids[0]],
-    max_selections=1,
-    format_func=lambda x: dec_id_to_title.get(x, x),
-    key="pick_decision_step4",
+    decision_ids,
+    default_dec,
+    lambda x: dec_id_to_title.get(x, x),
+    "pick_decision_step4",
 )
-decision_id = picked_dec[0] if picked_dec else decision_ids[0]
 st.session_state["decision_id"] = decision_id
 
 with engine.begin() as conn:
@@ -94,15 +177,13 @@ default_scen = st.session_state.get("scenario_id")
 if default_scen not in scen_ids:
     default_scen = scen_ids[0]
 
-picked_scen = st.multiselect(
+scenario_id = _inline_single_pick(
     "Scenario",
-    options=scen_ids,
-    default=[default_scen],
-    max_selections=1,
-    format_func=lambda x: scen_id_to_name.get(x, x),
-    key=f"pick_scenario_step4_{decision_id}",
+    scen_ids,
+    default_scen,
+    lambda x: scen_id_to_name.get(x, x),
+    f"pick_scenario_step4_{decision_id}",
 )
-scenario_id = picked_scen[0] if picked_scen else scen_ids[0]
 st.session_state["scenario_id"] = scenario_id
 st.session_state["method_choice"] = scen_id_to_method.get(scenario_id, "topsis")
 
@@ -127,15 +208,13 @@ default_pref = st.session_state.get("preference_set_id")
 if default_pref not in pref_ids:
     default_pref = pref_ids[0]
 
-picked_pref = st.multiselect(
-    "Preference set",
-    options=pref_ids,
-    default=[default_pref],
-    max_selections=1,
-    format_func=lambda x: pref_id_to_name.get(x, x),
-    key=f"pref_pick_step4_{scenario_id}",
+pref_id = _inline_single_pick(
+    "Preference Set",
+    pref_ids,
+    default_pref,
+    lambda x: pref_id_to_name.get(x, x),
+    f"pref_pick_step4_{scenario_id}",
 )
-pref_id = picked_pref[0] if picked_pref else pref_ids[0]
 st.session_state["preference_set_id"] = pref_id
 
 with engine.begin() as conn:
@@ -169,35 +248,44 @@ default_run = st.session_state.get("last_run_id")
 if default_run not in run_ids:
     default_run = run_ids[0]
 
-picked_run = st.multiselect(
+run_id = _inline_single_pick(
     "Run",
-    options=run_ids,
-    default=[default_run],
-    max_selections=1,
-    format_func=run_label_fmt,
-    key=f"run_pick_step4_{scenario_id}_{pref_id}",
+    run_ids,
+    default_run,
+    run_label_fmt,
+    f"run_pick_step4_{scenario_id}_{pref_id}",
 )
-run_id = picked_run[0] if picked_run else run_ids[0]
 st.session_state["last_run_id"] = run_id
 
 current_run = run_id_to_row.get(run_id, {})
 current_method = current_run.get("method", "topsis")
 
-st.divider()
-
 # ─── Run Summary ──────────────────────────────────────────────────────────────
-m1, m2, m3, m4 = st.columns(4)
-with m1:
-    st.metric("Method", current_method.upper())
-with m2:
-    st.metric("Run by", current_run.get("executed_by") or "—")
-with m3:
-    st.metric("Run at", str(current_run.get("executed_at", "—"))[:16])
-with m4:
-    lbl = current_run.get("run_label") or "—"
-    st.metric("Label", lbl)
-
-st.divider()
+lbl = current_run.get("run_label") or "—"
+st.markdown(
+    f"""
+    <div class="results-header-grid">
+      <div class="results-header-item">
+        <div class="lbl">Method</div>
+        <div class="val">{current_method.upper()}</div>
+      </div>
+      <div class="results-header-item">
+        <div class="lbl">Run By</div>
+        <div class="val">{current_run.get("executed_by") or "—"}</div>
+      </div>
+      <div class="results-header-item">
+        <div class="lbl">Run At</div>
+        <div class="val">{str(current_run.get("executed_at", "—"))[:16]}</div>
+      </div>
+      <div class="results-header-item">
+        <div class="lbl">Label</div>
+        <div class="val">{lbl}</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown("<div class='results-divider'></div>", unsafe_allow_html=True)
 
 # ─── Inputs table ─────────────────────────────────────────────────────────────
 with st.expander("📊 Inputs Used for This Run", expanded=False):
@@ -213,7 +301,7 @@ with st.expander("📊 Inputs Used for This Run", expanded=False):
                            data=combined.to_csv().encode(),
                            file_name=f"inputs_{run_id[:8]}.csv", mime="text/csv")
 
-st.divider()
+st.markdown("<div class='results-divider'></div>", unsafe_allow_html=True)
 
 # ─── Results: Branch on method ────────────────────────────────────────────────
 scores = result_repo.get_scores_with_names(run_id)
@@ -239,7 +327,7 @@ if current_method == "topsis":
                 title="TOPSIS Score C* by Alternative",
                 labels={"alternative_name": "Alternative", "score": "C* Score"},
             )
-            fig.update_layout(showlegend=False, height=380, margin=dict(l=10,r=10,t=40,b=10))
+            fig.update_layout(showlegend=False, height=360, margin=dict(l=10,r=10,t=36,b=10))
             st.plotly_chart(fig, use_container_width=True)
             st.caption("""
 **Fig: TOPSIS Ranking Bar Chart** — Each bar represents a C* score (Closeness to Ideal) 
@@ -262,7 +350,7 @@ and S− is distance to ideal worst.
                 labels={"s_pos": "S+ (distance to ideal best)", "s_neg": "S− (distance to ideal worst)"},
             )
             fig_sc.update_traces(textposition="top center")
-            fig_sc.update_layout(height=420, margin=dict(l=10,r=10,t=50,b=10))
+            fig_sc.update_layout(height=380, margin=dict(l=10,r=10,t=42,b=10))
             st.plotly_chart(fig_sc, use_container_width=True)
             st.caption("""
 **Fig: S+ vs S− Scatter Plot** — Each point is an alternative. The best alternatives 
@@ -305,7 +393,7 @@ are far from ideal best and close to ideal worst.
                         xmax = max(df_c["weighted_value"].max(), pos, neg)
                         pad = (xmax - xmin) * 0.1 if xmax > xmin else 0.1
                         fig.update_xaxes(range=[xmin - pad, xmax + pad])
-                        fig.update_layout(title=f"Valve View: {c}", height=380, margin=dict(l=10,r=10,t=50,b=10))
+                        fig.update_layout(title=f"Valve View: {c}", height=350, margin=dict(l=10,r=10,t=42,b=10))
                         st.plotly_chart(fig, use_container_width=True)
                         st.caption(f"**Fig: Valve View for {c}** — Solid line = PIS (ideal best weighted value), dashed = NIS (ideal worst). "
                                    "Alternatives are plotted along the weighted value axis.")
@@ -316,7 +404,7 @@ are far from ideal best and close to ideal worst.
             fig_heat = px.imshow(norm_df.values, x=list(norm_df.columns), y=list(norm_df.index),
                                  aspect="auto", title="Normalized Matrix Heatmap",
                                  color_continuous_scale=BLUE_SCALE)
-            fig_heat.update_layout(height=380, margin=dict(l=10,r=10,t=50,b=10))
+            fig_heat.update_layout(height=350, margin=dict(l=10,r=10,t=42,b=10))
             st.plotly_chart(fig_heat, use_container_width=True)
             st.caption("**Fig: Normalized Matrix Heatmap** — Vector-normalized values. Darker = higher normalized value.")
             st.dataframe(norm_df, use_container_width=True)
@@ -329,7 +417,7 @@ are far from ideal best and close to ideal worst.
             fig_heat2 = px.imshow(w_df.values, x=list(w_df.columns), y=list(w_df.index),
                                   aspect="auto", title="Weighted Matrix Heatmap",
                                   color_continuous_scale=BLUE_TEAL_SCALE)
-            fig_heat2.update_layout(height=380, margin=dict(l=10,r=10,t=50,b=10))
+            fig_heat2.update_layout(height=350, margin=dict(l=10,r=10,t=42,b=10))
             st.plotly_chart(fig_heat2, use_container_width=True)
             st.caption("**Fig: Weighted Matrix Heatmap** — Normalized values multiplied by criterion weights. "
                        "Reflects both data and weight preferences.")
@@ -356,7 +444,7 @@ elif current_method == "vft":
                 title="VFT Total Score by Alternative",
                 labels={"alternative_name": "Alternative", "score": "Total Score"},
             )
-            fig.update_layout(showlegend=False, height=380, margin=dict(l=10,r=10,t=40,b=10))
+            fig.update_layout(showlegend=False, height=360, margin=dict(l=10,r=10,t=36,b=10))
             st.plotly_chart(fig, use_container_width=True)
             st.caption("""
 **Fig: VFT Ranking Bar Chart** — Total scores are the weighted sum of utility values 
@@ -374,7 +462,7 @@ u(x) ∈ [0,1] for each criterion. Higher = better. Score = Σ(weight_i × utili
             fig_heat = px.imshow(util_wide.values, x=list(util_wide.columns), y=list(util_wide.index),
                                  aspect="auto", title="Utility Values Heatmap (0=worst, 1=best)",
                                  color_continuous_scale=BLUE_TEAL_SCALE, zmin=0, zmax=1)
-            fig_heat.update_layout(height=400, margin=dict(l=10,r=10,t=50,b=10))
+            fig_heat.update_layout(height=360, margin=dict(l=10,r=10,t=42,b=10))
             st.plotly_chart(fig_heat, use_container_width=True)
             st.caption("**Fig: Utility Heatmap** — Darker teal-blue cells indicate higher utility (close to 1), while lighter blue cells indicate lower utility (close to 0). "
                        "Each cell shows how well an alternative performs on a criterion after value function transformation.")
@@ -392,7 +480,7 @@ u(x) ∈ [0,1] for each criterion. Higher = better. Score = Σ(weight_i × utili
                         "criterion_name": "Criterion"},
                 color_discrete_sequence=DISCRETE_PALETTE,
             )
-            fig_stacked.update_layout(height=420, margin=dict(l=10,r=10,t=50,b=10))
+            fig_stacked.update_layout(height=380, margin=dict(l=10,r=10,t=42,b=10))
             st.plotly_chart(fig_stacked, use_container_width=True)
             st.caption("""
 **Fig: Stacked Contribution Chart** — Each segment shows the weighted utility contribution of one 

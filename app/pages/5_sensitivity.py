@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from sqlalchemy import text
@@ -17,6 +18,8 @@ from persistence.repositories.topsis_read_repo import TopsisReadRepo
 
 st.set_page_config(page_title="MCDA - Sensitivity & Comparison", layout="wide")
 apply_theme()
+pio.templates.default = "plotly_white"
+px.defaults.template = "plotly_white"
 
 guard_page("pages/5_sensitivity.py")
 sync_method_from_scenario()

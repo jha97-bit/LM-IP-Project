@@ -4,34 +4,34 @@ from persistence.engine import get_engine
 from persistence.repositories.scenario_repo import ScenarioRepo
 
 FLOW_TOPSIS = [
-    ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
-    ("data", "Data Input", "pages/2_data_input.py", "📊"),
-    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
-    ("results", "Results", "pages/4_results.py", "🏆"),
-    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
-    ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
-    ("history", "History", "pages/7_history.py", "🕘"),
+    ("setup", "Decision Setup", "pages/1_decision_setup.py", ""),
+    ("data", "Data Input", "pages/2_data_input.py", ""),
+    ("run_model", "Run Model", "pages/3_run_models.py", ""),
+    ("results", "Results", "pages/4_results.py", ""),
+    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", ""),
+    ("report", "Report Builder", "pages/6_report_builder.py", ""),
+    ("history", "History", "pages/7_history.py", ""),
 ]
 
 FLOW_VFT = [
-    ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
-    ("data", "Data Input", "pages/2_data_input.py", "📊"),
-    ("value_functions", "Value Functions", "pages/3b_vft_value_functions.py", "📈"),
-    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
-    ("results", "Results", "pages/4_results.py", "🏆"),
-    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
-    ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
-    ("history", "History", "pages/7_history.py", "🕘"),
+    ("setup", "Decision Setup", "pages/1_decision_setup.py", ""),
+    ("data", "Data Input", "pages/2_data_input.py", ""),
+    ("value_functions", "Value Functions", "pages/3b_vft_value_functions.py", ""),
+    ("run_model", "Run Model", "pages/3_run_models.py", ""),
+    ("results", "Results", "pages/4_results.py", ""),
+    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", ""),
+    ("report", "Report Builder", "pages/6_report_builder.py", ""),
+    ("history", "History", "pages/7_history.py", ""),
 ]
 
 FLOW_AHP = [
-    ("setup", "Decision Setup", "pages/1_decision_setup.py", "🧭"),
-    ("data", "Data Input", "pages/2_data_input.py", "📊"),
-    ("run_model", "Run Model", "pages/3_run_models.py", "▶️"),
-    ("results", "Results", "pages/4_results.py", "🏆"),
-    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", "🧪"),
-    ("report", "Report Builder", "pages/6_report_builder.py", "📝"),
-    ("history", "History", "pages/7_history.py", "🕘"),
+    ("setup", "Decision Setup", "pages/1_decision_setup.py", ""),
+    ("data", "Data Input", "pages/2_data_input.py", ""),
+    ("run_model", "Run Model", "pages/3_run_models.py", ""),
+    ("results", "Results", "pages/4_results.py", ""),
+    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", ""),
+    ("report", "Report Builder", "pages/6_report_builder.py", ""),
+    ("history", "History", "pages/7_history.py", ""),
 ]
 
 

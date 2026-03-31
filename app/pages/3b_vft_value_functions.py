@@ -87,7 +87,15 @@ for crit in existing_crit:
     })
 
 if overview_rows:
-    st.dataframe(pd.DataFrame(overview_rows), use_container_width=True, hide_index=True)
+    overview_df = pd.DataFrame(overview_rows)
+    overview_df_styled = overview_df.style.set_table_styles(
+        [
+            {"selector": "table", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B")]},
+            {"selector": "thead th", "props": [("background-color", "#F1F5F9"), ("color", "#1E293B"), ("font-weight", "600")]},
+            {"selector": "tbody td", "props": [("background-color", "#FFFFFF"), ("color", "#1E293B"), ("border-bottom", "1px solid #E2E8F0")]},
+        ]
+    )
+    st.dataframe(overview_df_styled, use_container_width=True, hide_index=True)
 
 not_configured = [r["Criterion"] for r in overview_rows if "⚠️" in r["Status"]]
 if not_configured:

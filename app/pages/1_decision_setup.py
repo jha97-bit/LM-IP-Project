@@ -3,6 +3,7 @@ import bootstrap  # noqa: F401
 import streamlit as st
 from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.app_context import set_scenario_context
 from app.sidebar_nav import render_sidebar
@@ -14,6 +15,18 @@ from services.scenario_share_service import ScenarioShareService
 st.set_page_config(page_title="MCDA — Decision Setup", layout="wide")
 apply_theme()
 st.title("Step 1: Decision & Scenario Setup")
+st.markdown(
+    """
+    <style>
+    /* Compact vertical rhythm for Step 1 */
+    div[data-testid="stExpander"] { margin-top: 6px !important; margin-bottom: 8px !important; }
+    div[data-testid="stExpander"] + div { margin-top: 0 !important; }
+    h2, h3 { margin-bottom: 0.35rem !important; }
+    p { margin-bottom: 0.45rem !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 engine = get_engine()
 decision_repo = DecisionRepo(engine)
@@ -39,7 +52,7 @@ with nav_col2:
         st.switch_page("pages/2_data_input.py")
 
 st.caption("Set the business decision context, then choose or create a scenario.")
-st.divider()
+st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ─── 1A: Decision ──────────────────────────────────────────────────────────
 st.subheader("1A. Select or Create a Decision")
@@ -87,10 +100,10 @@ else:
         st.rerun()
     st.info(f"📋 Selected: **{decision_id_to_title.get(selected_decision, selected_decision)}**")
 
-st.divider()
+st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
 # ─── Scenario Import — between Decision and Scenario ───────────────────────
-with st.expander("📦 Import a colleague's scenario (.mcda file)", expanded=False):
+with st.expander("Import a colleague's scenario (.mcda file)", expanded=False):
     st.info(
         "Upload a .mcda file (exported from Step 7 — History) to load a full scenario "
         "into your database. You can rename it before confirming import."
@@ -124,12 +137,12 @@ with st.expander("📦 Import a colleague's scenario (.mcda file)", expanded=Fal
                     st.session_state["decision_id"] = result["decision_id"]
                     st.session_state["scenario_id"] = result["scenario_id"]
                     set_scenario_context(result["scenario_id"])
-                    st.toast(f"✅ Imported: {new_name or result.get('scenario_name', '')}", icon="📦")
+                    st.toast(f"Imported: {new_name or result.get('scenario_name', '')}", icon="✅")
                     st.rerun()
                 except Exception as e:
                     st.warning(f"Import failed: {e}")
 
-st.divider()
+st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ─── 1B: Scenario ───────────────────────────────────────────────────────────
 st.subheader("1B. Select or Create a Scenario")
@@ -245,17 +258,45 @@ if creating_new_scenario:
 
     can_create_scenario = bool((sname or "").strip()) and bool(st.session_state.get("method_choice"))
     if st.button("Create Scenario", type="primary", disabled=not can_create_scenario, key="btn_create_scenario"):
-        sid = scenario_repo.create_scenario(
-            decision_id=st.session_state["decision_id"],
-            name=sname.strip(),
-            method_type=st.session_state["method_choice"],
-            description=(sdesc or "").strip(),
-            created_by=user_name,
-        )
-        st.session_state["scenario_id"] = sid
-        set_scenario_context(sid)
-        st.toast(f"✅ Scenario '{sname.strip()}' created!", icon="📂")
-        st.rerun()
+        scen_name_clean = sname.strip()
+        try:
+            sid = scenario_repo.create_scenario(
+                decision_id=st.session_state["decision_id"],
+                name=scen_name_clean,
+                method_type=st.session_state["method_choice"],
+                description=(sdesc or "").strip(),
+                created_by=user_name,
+            )
+            st.session_state["scenario_id"] = sid
+            set_scenario_context(sid)
+            st.toast(f"✅ Scenario '{scen_name_clean}' created!", icon="📂")
+            st.rerun()
+        except IntegrityError:
+            # Unique constraint: (decision_id, name). Select existing scenario instead of crashing.
+            with engine.begin() as conn:
+                row = conn.execute(
+                    text(
+                        """
+                        SELECT scenario_id::text AS scenario_id, method_type
+                        FROM scenarios
+                        WHERE decision_id = :did AND name = :name
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                        """
+                    ),
+                    {"did": st.session_state["decision_id"], "name": scen_name_clean},
+                ).mappings().first()
+            if row:
+                sid = str(row["scenario_id"])
+                st.session_state["scenario_id"] = sid
+                st.session_state["method_choice"] = row.get("method_type") or st.session_state.get("method_choice")
+                set_scenario_context(sid)
+                st.warning(
+                    f"A scenario named **{scen_name_clean}** already exists for this decision. "
+                    "Selected the existing scenario instead."
+                )
+                st.rerun()
+            raise
 else:
     st.session_state["scenario_id"] = selected_scenario
     scenario_meta = scenario_id_to_meta.get(selected_scenario, {})

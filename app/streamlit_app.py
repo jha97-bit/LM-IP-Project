@@ -9,7 +9,7 @@ from persistence.engine import get_engine, ping_db
 
 st.set_page_config(
     page_title="MCDA Decision Tool",
-    page_icon="📊",
+    page_icon="M",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -100,7 +100,7 @@ st.session_state.setdefault("method_choice", None)
 render_sidebar("streamlit_app.py")
 
 # ─── Header ────────────────────────────────────────────────────────────────────
-st.title("📊 MCDA Decision Tool")
+st.title("MCDA Decision Tool")
 st.caption(
     "Multi-Criteria Decision Analysis · TOPSIS, VFT, and AHP (reserved) · Internal Enterprise Tool"
 )
@@ -112,17 +112,15 @@ except Exception:
     db_ok = False
 
 if db_ok:
-    st.success("🟢 Database connected", icon=None)
+    st.success("Database connected", icon=None)
 else:
     st.warning("Database not reachable — check DATABASE_URL in your .env file")
-
-st.divider()
 
 # ─── Identity + Quick Start ────────────────────────────────────────────────────
 left_col, right_col = st.columns([2, 1], gap="large")
 
 with left_col:
-    st.subheader("👤 Who are you?")
+    st.subheader("Who Are You?")
     st.caption("Your name will be recorded on every run for traceability.")
     user_name = st.text_input(
         "Your name",
@@ -132,11 +130,11 @@ with left_col:
     )
     st.session_state["user_name"] = (user_name or "").strip()
 
-    st.markdown("### 🚀 Start a new analysis")
+    st.markdown("### START A NEW ANALYSIS")
     col_t, col_v, col_a, col_h = st.columns(4)
     with col_t:
         if st.button(
-            "📐 TOPSIS",
+            "TOPSIS",
             type="primary",
             use_container_width=True,
             disabled=not st.session_state["user_name"],
@@ -146,7 +144,7 @@ with left_col:
 
     with col_v:
         if st.button(
-            "📈 VFT",
+            "VFT",
             type="primary",
             use_container_width=True,
             disabled=not st.session_state["user_name"],
@@ -156,7 +154,7 @@ with left_col:
 
     with col_a:
         if st.button(
-            "⚖️ AHP",
+            "AHP",
             type="primary",
             use_container_width=True,
             disabled=not st.session_state["user_name"],
@@ -166,14 +164,14 @@ with left_col:
 
     with col_h:
         if st.button(
-            "🕘 History",
+            "HISTORY",
             use_container_width=True,
             disabled=not db_ok,
         ):
             st.switch_page("pages/7_history.py")
 
     if not st.session_state["user_name"]:
-        st.caption("⬆ Enter your name to enable analysis buttons")
+        st.caption("Enter your name to enable analysis buttons.")
 
 with right_col:
     # Live stats
@@ -231,16 +229,14 @@ with right_col:
             </div>
             """, unsafe_allow_html=True)
 
-st.divider()
-
 # ─── Methods overview ─────────────────────────────────────────────────────────
-st.markdown("### 🧮 Analysis Methods")
+st.markdown("### ANALYSIS METHODS")
 mc1, mc2, mc3 = st.columns(3, gap="large")
 
 with mc1:
     st.markdown("""
     <div class="method-card">
-      <h3>📐 TOPSIS</h3>
+      <h3>TOPSIS</h3>
       <span class="badge-topsis">Technique for Order of Preference by Similarity to Ideal Solution</span>
       <p style="margin-top: 1rem;">Ranks alternatives by measuring their distance from the ideal best
       and ideal worst solutions. Best suited when you have quantitative data with clear benefit/cost directions.</p>
@@ -258,7 +254,7 @@ with mc1:
 with mc2:
     st.markdown("""
     <div class="method-card">
-      <h3>📈 VFT — Value Function Transformation</h3>
+      <h3>VFT — Value Function Transformation</h3>
       <span class="badge-vft">Multi-Attribute Value Theory</span>
       <p style="margin-top: 1rem;">Converts raw measurements into utility scores (0–1) using user-defined
       value functions. Supports linear and custom piecewise-linear functions. Ideal when preferences
@@ -277,7 +273,7 @@ with mc2:
 with mc3:
     st.markdown("""
     <div class="method-card">
-      <h3>⚖️ AHP — Analytic Hierarchy Process</h3>
+      <h3>AHP — Analytic Hierarchy Process</h3>
       <span class="badge-ahp">Pairwise comparisons</span>
       <p style="margin-top: 1rem;">Structured priority derivation from pairwise judgments (e.g. 1–9 scale).
       The app reserves <b>AHP</b> as a scenario type and in the database schema; the full pairwise engine
@@ -293,11 +289,9 @@ with mc3:
     </div>
     """, unsafe_allow_html=True)
 
-st.divider()
-
 # ─── Recent Activity ──────────────────────────────────────────────────────────
 if db_ok:
-    st.markdown("### 🕐 Recent Runs")
+    st.markdown("### RECENT RUNS")
     try:
         engine = get_engine()
         with engine.begin() as conn:
@@ -340,10 +334,8 @@ if db_ok:
     except Exception as e:
         st.warning(f"Could not load recent runs: {e}")
 
-st.divider()
-
 # ─── Governance note ──────────────────────────────────────────────────────────
-st.markdown("### 🏛 Governance and Auditability")
+st.markdown("### GOVERNANCE AND AUDITABILITY")
 g1, g2, g3 = st.columns(3)
 with g1:
     st.markdown("**Database as source of truth**")
