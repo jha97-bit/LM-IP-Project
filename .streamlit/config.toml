@@ -1,6 +1,12 @@
-[theme]
-base = "light"
-primaryColor = "#1E3A5F"
-backgroundColor = "#F4F4F4"
-secondaryBackgroundColor = "#EEF2F6"
-textColor = "#333333"
+# Hide the top developer strip (File change / Rerun / …) on localhost.
+# Rerun is available under the sidebar “App” section instead.
+#
+# app/.streamlit/config.toml symlinks here. Streamlit loads .streamlit/config.toml from the
+# process working directory, so running `streamlit run streamlit_app.py` from app/ would miss
+# this file unless that symlink exists.
+#
+# NOTE: Do not add a [theme] section here if you need ⋮ → Settings → “Choose app theme” to work.
+# When [theme] is defined, Streamlit locks the active theme to “Custom Theme” and disables
+# that dropdown (by design). Navy/teal/light styling is applied in app/ui_theme.py instead.
+[client]
+toolbarMode = "viewer"

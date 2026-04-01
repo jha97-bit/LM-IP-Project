@@ -3,10 +3,9 @@ import bootstrap  # noqa: F401
 import numpy as np
 import pandas as pd
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
-import plotly.express as px
 import plotly.graph_objects as go
 from sqlalchemy import text
 
@@ -19,6 +18,7 @@ from persistence.repositories.preference_repo import PreferenceRepo
 st.set_page_config(page_title="MCDA — Data Input", layout="wide")
 st.title("Step 2: Data Input")
 apply_theme()
+section_header("Data Input", variant="gradient")
 
 guard_page("pages/2_data_input.py", require_scenario=True)
 sync_method_from_scenario()
@@ -59,7 +59,7 @@ with nav_right:
     if st.button(next_label, type="primary", disabled=not can_next, key="nav_next_data"):
         st.switch_page(next_page)
 
-_badges = {"topsis": "TOPSIS", "vft": "VFT", "ahp": "AHP"}
+_badges = {"topsis": "TOPSIS", "vft": "VFT"}
 method_badge = _badges.get(method_choice, method_choice.upper())
 st.caption(f"Method: **{method_badge}** · Fill alternatives, criteria, matrix and preference weights, then Save.")
 st.caption("Step 2 of 7 — build alternatives/criteria, then matrix, then preference weights.")
@@ -88,7 +88,7 @@ with tab_alts:
 
     with col_a:
         st.markdown("<div class='input-card'>", unsafe_allow_html=True)
-        st.subheader("Alternatives")
+        section_header("Alternatives", variant="sub")
         st.caption("Each row is one option to evaluate.")
         default_alts = alt_names_existing or ["Option A", "Option B", "Option C"]
         alts_df = pd.DataFrame({"Alternative Name": default_alts})
@@ -99,7 +99,7 @@ with tab_alts:
 
     with col_b:
         st.markdown("<div class='input-card'>", unsafe_allow_html=True)
-        st.subheader("Criteria")
+        section_header("Criteria", variant="sub")
         UNIT_OPTIONS = ["score","points","rank","rating","USD","percent","days","hours",
                         "minutes","ms","seconds","kg","g","km","m","Yes/No","count","other"]
         SCALE_OPTIONS = ["ratio","interval","ordinal","binary"]
@@ -229,7 +229,7 @@ with tab_matrix:
     if not alt_names_db or not crit_names_db:
         st.info("Save alternatives and criteria first (tab above) to unlock the matrix editor.")
     else:
-        st.subheader("Performance Matrix")
+        section_header("Performance Matrix", variant="accent")
         st.caption("Enter the raw values for each alternative–criterion combination.")
 
         # Direction legend
@@ -277,7 +277,7 @@ with tab_prefs:
     if not alt_names_db or not crit_names_db:
         st.info("Save alternatives and criteria first.")
     else:
-        st.subheader("Preference Sets")
+        section_header("Preference Sets", variant="accent")
         st.caption("A preference set holds one weighting scenario. Create multiple to compare stakeholder views.")
 
         with engine.begin() as conn:
@@ -332,18 +332,32 @@ with tab_prefs:
             st.stop()
 
         st.divider()
-        st.subheader("Weight Distribution")
+        section_header("Weight Distribution", variant="sub")
         existing_weights = pref_repo.load_weights_by_criterion_name(pref_id)
 
         n_crits = len(crit_names_db)
         equal_preset = 1.0 / max(1, n_crits)
+
+        def _has_meaningful_saved_weights(wmap: dict) -> bool:
+            if not wmap:
+                return False
+            return any(float(v or 0) > 0 for v in wmap.values())
+
+        # VFT: equal split by default when there are no saved weights (same baseline as TOPSIS)
+        if method_choice == "vft":
+            _vft_eq_key = f"vft_default_equal_weights_{pref_id}"
+            if (
+                not st.session_state.get(_vft_eq_key)
+                and not _has_meaningful_saved_weights(existing_weights)
+            ):
+                st.session_state[f"force_equal_preset_{pref_id}"] = True
+                st.session_state[_vft_eq_key] = True
         force_equal_preset = st.session_state.pop(f"force_equal_preset_{pref_id}", False)
 
         # ── Build weights from session state with two-way slider <-> number sync ──
         weights_by_name = {}
-        color_sequence = px.colors.qualitative.Vivid
         criterion_colors = {
-            cname: color_sequence[i % len(color_sequence)]
+            cname: DISCRETE_PALETTE[i % len(DISCRETE_PALETTE)]
             for i, cname in enumerate(crit_names_db)
         }
 
@@ -493,7 +507,7 @@ with tab_prefs:
                     f"</div></div></div>",
                     unsafe_allow_html=True,
                 )
-            sum_color = "#38a169" if abs(w_sum - 1.0) < 0.001 or auto_normalize else "#7c3aed"
+            sum_color = "#2A9D8F" if abs(w_sum - 1.0) < 0.001 or auto_normalize else "#1E3A5F"
             st.markdown(
                 f"<div style='text-align:right;margin-top:8px;font-weight:700;color:{sum_color}'>"
                 f"Σ = {w_sum:.3f} {'✓' if abs(w_sum - 1.0) < 0.001 else '(will normalize)'}</div>",

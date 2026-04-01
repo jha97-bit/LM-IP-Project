@@ -10,7 +10,7 @@ from matplotlib import colors as mcolors
 import numpy as np
 import pandas as pd
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from sqlalchemy import text
 
 from app.app_context import guard_page, sync_method_from_scenario
@@ -26,6 +26,7 @@ from services.vft_service import VFTService
 st.set_page_config(page_title="MCDA — Report Builder", layout="wide")
 apply_theme()
 st.title("Step 6: Report Builder")
+section_header("Report Builder", variant="gradient")
 
 guard_page("pages/6_report_builder.py", require_scenario=True)
 sync_method_from_scenario()
@@ -559,7 +560,7 @@ def comparison_distance_chart(dist_df: pd.DataFrame, selection_order: List[str])
 
 
 # Selection
-st.subheader("Select Data to Report")
+section_header("Select Data to Report", variant="accent")
 
 decisions = load_decisions()
 if not decisions:
@@ -638,7 +639,7 @@ run_method = run_meta.get("method", method_choice)
 st.divider()
 
 # Header
-st.subheader("Report Header")
+section_header("Report Header", variant="sub")
 col_title, col_author = st.columns(2)
 with col_title:
     report_title = st.text_input("Report title", value=st.session_state.get("report_title", "MCDA Analysis Report"), key="rpt_title_input")
@@ -669,7 +670,7 @@ weighted_input_df = weighted_input_matrix(matrix_df, weights_map)
 util_df, weighted_util_df = get_vft_tables(run_id) if run_method == "vft" else (pd.DataFrame(), pd.DataFrame())
 
 # Per-section content
-st.subheader("Section Content, Elements, and Notes")
+section_header("Section Content, Elements, and Notes", variant="sub")
 sections: dict = {}
 
 with st.expander("Section 1: Input Matrix and Weights", expanded=True):
@@ -774,7 +775,7 @@ with st.expander("Section 5: Compared Preference Sets", expanded=False):
             st.info("Select at least 2 preference sets to enable this section.")
 
 st.divider()
-st.subheader("Export Report")
+section_header("Export Report", variant="accent")
 col_e1, col_e2 = st.columns([1, 3])
 with col_e1:
     do_export = st.button("Generate Report (DOCX)", type="primary", key="btn_gen_report")

@@ -24,17 +24,6 @@ FLOW_VFT = [
     ("history", "History", "pages/7_history.py", ""),
 ]
 
-FLOW_AHP = [
-    ("setup", "Decision Setup", "pages/1_decision_setup.py", ""),
-    ("data", "Data Input", "pages/2_data_input.py", ""),
-    ("run_model", "Run Model", "pages/3_run_models.py", ""),
-    ("results", "Results", "pages/4_results.py", ""),
-    ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", ""),
-    ("report", "Report Builder", "pages/6_report_builder.py", ""),
-    ("history", "History", "pages/7_history.py", ""),
-]
-
-
 def sync_method_from_scenario(scenario_id: str | None = None):
     sid = scenario_id or st.session_state.get("scenario_id")
     if not sid:
@@ -64,8 +53,9 @@ def get_active_flow():
     m = get_active_method()
     if m == "vft":
         return FLOW_VFT
+    # Legacy DB rows may still have method_type 'ahp'; UI no longer supports it — use TOPSIS-shaped flow.
     if m == "ahp":
-        return FLOW_AHP
+        return FLOW_TOPSIS
     return FLOW_TOPSIS
 
 
@@ -83,6 +73,16 @@ def guard_page(page_path: str, require_scenario: bool = True):
     method = st.session_state.get("method_choice")
     if require_scenario and not method:
         st.switch_page("pages/1_decision_setup.py")
+
+    # AHP removed from UI — block all app pages except Step 1 (handled there).
+    if method == "ahp" and require_scenario:
+        st.error(
+            "This scenario uses **AHP**, which is not supported. "
+            "Go to Step 1 and create a new scenario with **TOPSIS** or **VFT**."
+        )
+        if st.button("Go to Step 1: Decision & Scenario", type="primary", key="guard_block_unsupported_ahp"):
+            st.switch_page("pages/1_decision_setup.py")
+        st.stop()
 
     if method and page_path not in get_allowed_page_paths():
         first_valid = get_active_flow()[0][2]

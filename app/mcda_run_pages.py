@@ -12,7 +12,7 @@ import plotly.io as pio
 import streamlit as st
 from sqlalchemy import text
 
-from app.ui_theme import BLUE_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import BLUE_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from core.topsis import compute_topsis
 from core.vft_model import Attribute
 from persistence.repositories.alternative_repo import AlternativeRepo
@@ -64,7 +64,7 @@ def _render_light_table(df: pd.DataFrame, fmt: str = "{:.4f}") -> None:
 
 
 def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
-    st.subheader("TOPSIS")
+    section_header("TOPSIS", variant="gradient")
     st.caption("Preview the TOPSIS run against your data, then save to persist results.")
     nav_left, nav_right = st.columns(2)
     with nav_left:
@@ -134,7 +134,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
         st.warning(str(e))
         st.stop()
 
-    st.subheader("Validation")
+    section_header("Validation", variant="sub")
     if ok:
         st.success("Scenario data is complete and ready to run.")
     else:
@@ -181,7 +181,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
             return None, None
         return str(row["run_id"]), dict(row)
 
-    st.subheader("Run Preview")
+    section_header("Run Preview", variant="accent")
 
     colA, colB, colC = st.columns([2, 2, 4])
     with colA:
@@ -221,7 +221,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
     dup_check = st.session_state.get("dup_check")
 
     if preview:
-        st.subheader("Preview Ranking")
+        section_header("Preview Ranking", variant="sub")
         scores_df = pd.DataFrame(preview["scores"])
         fig = px.bar(
             scores_df.sort_values("rank"),
@@ -247,7 +247,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
         st.plotly_chart(fig, use_container_width=True)
         _render_light_table(scores_df[["alternative_name", "score", "rank"]].rename(columns={"alternative_name": "Alternative"}), "{:.4f}")
 
-    st.subheader("Save Results")
+    section_header("Save Results", variant="accent")
 
     save_disabled = preview is None
     overwrite = False
@@ -373,7 +373,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
 
 
 def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
-    st.subheader("VFT — Value Function Transformation")
+    section_header("VFT — Value Function Transformation", variant="gradient")
     st.caption("Preview the VFT scoring, then save to persist results.")
 
     alt_repo = AlternativeRepo(engine)
@@ -534,7 +534,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         return utility_matrix, weighted_matrix, total_scores
 
     st.divider()
-    st.subheader("Run Preview")
+    section_header("Run Preview", variant="accent")
 
     if st.button("Preview VFT Scoring", type="primary", key="vft_preview_btn"):
         utility_matrix, weighted_matrix, total_scores = compute_preview()
@@ -563,7 +563,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
             for i, (alt, _) in enumerate(sorted_alts)
         }
 
-        st.subheader("Preview Ranking")
+        section_header("Preview Ranking", variant="sub")
         rank_df = pd.DataFrame(
             [{"Rank": i + 1, "Alternative": alt, "VFT Score": f"{sc:.4f}"} for i, (alt, sc) in enumerate(sorted_alts)]
         )
@@ -627,18 +627,18 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         )
         st.dataframe(rank_df_display, use_container_width=True)
 
-        st.subheader("Utility Matrix (0-1)")
+        section_header("Utility Matrix (0-1)", variant="sub")
         util_df = pd.DataFrame(utility_matrix).T
         util_df = util_df[crit_names]
         _render_light_table(util_df.reset_index(drop=True), "{:.4f}")
 
-        st.subheader("Weighted Contribution Matrix")
+        section_header("Weighted Contribution Matrix", variant="sub")
         weighted_df = pd.DataFrame(weighted_matrix).T
         weighted_df = weighted_df[crit_names]
         weighted_df["Total"] = weighted_df.sum(axis=1)
         _render_light_table(weighted_df.reset_index(drop=True), "{:.4f}")
 
-        st.subheader("Contribution by Criterion")
+        section_header("Contribution by Criterion", variant="sub")
         contrib_long = (
             weighted_df.drop(columns=["Total"])
             .reset_index()
@@ -669,7 +669,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         st.plotly_chart(stack_fig, use_container_width=True)
 
         st.divider()
-        st.subheader("Save Run")
+        section_header("Save Run", variant="accent")
 
         if st.button("Save VFT Run", type="primary", key="vft_save"):
             alt_map = {a["name"]: a["alternative_id"] for a in existing_alts}
@@ -708,22 +708,4 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
             st.switch_page("pages/3b_vft_value_functions.py")
     with col_next:
         if st.button("Go To Results", key="vft_run_results_bottom"):
-            st.switch_page("pages/4_results.py")
-
-
-def render_ahp_placeholder() -> None:
-    st.subheader("AHP — Analytic Hierarchy Process")
-    st.info(
-        "Pairwise comparison matrices, consistency checks, and eigenvector-derived weights are **not "
-        "implemented in this build**. The schema reserves `ahp` as a method type for future integration "
-        "with the shared `runs` / `result_scores` tables.\n\n"
-        "**What you can do now:** create a **TOPSIS** or **VFT** scenario for runnable analysis, or enter "
-        "judgment-based weights manually in Step 2 and run **VFT**."
-    )
-    nav_left, nav_right = st.columns(2)
-    with nav_left:
-        if st.button("Step 2: Data Input", key="ahp_nav_back"):
-            st.switch_page("pages/2_data_input.py")
-    with nav_right:
-        if st.button("Next: Results", type="primary", key="ahp_nav_next"):
             st.switch_page("pages/4_results.py")

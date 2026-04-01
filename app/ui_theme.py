@@ -8,6 +8,26 @@ BLUE_TEAL_SCALE = ["#F4F4F4", "#E8EEF3", "#D4E1E0", "#B8D8D2", "#93C8BD", "#5FB3
 DISCRETE_PALETTE = ["#1E3A5F", "#2A9D8F", "#E9C46A", "#5B84A6", "#3B6E9A", "#4AAFA0", "#CDAE5D", "#2F506F", "#6BAFA5", "#A8DADC"]
 ALT_BAR_PALETTE = ["#1E3A5F", "#2A9D8F", "#E9C46A", "#5B84A6", "#4AAFA0", "#2F506F", "#CDAE5D", "#A8DADC"]
 
+
+def section_header(text: str, variant: str = "accent") -> None:
+    """
+    Render a consistent heading ribbon across pages.
+
+    variant:
+      - "solid": teal filled ribbon
+      - "accent": light background with teal left bar
+      - "gradient": teal→navy gradient ribbon
+      - "sub": smaller accent header for subsections
+    """
+    cls = {
+        "solid": "section-header section-header--solid",
+        "accent": "section-header section-header--accent",
+        "gradient": "section-header section-header--gradient",
+        "sub": "section-header section-header--sub",
+    }.get(variant, "section-header section-header--accent")
+    st.markdown(f"<div class='{cls}'>{text}</div>", unsafe_allow_html=True)
+
+
 def apply_theme():
     # Force a light Plotly baseline across all pages/charts.
     pio.templates.default = "plotly_white"
@@ -24,7 +44,16 @@ def apply_theme():
           --text-900: #1E293B;
           --text-700: #475569;
           --border: #E2E8F0;
+          --success: #10B981;
+          --warning: #FBBF24;
+          /* Semantic “negative” without pure red (Streamlit may use for widget chrome) */
+          --danger: #5B7C99;
           color-scheme: light;
+        }
+
+        /* Streamlit host: steer accent away from default red on inputs */
+        .stApp {
+          --primary-color: #1E3A5F !important;
         }
 
         /* Prevent OS/browser dark mode from forcing dark table surfaces */
@@ -32,8 +61,15 @@ def apply_theme():
           color-scheme: light !important;
         }
 
+        /* Typography system */
         html, body, .stApp, [data-testid="stAppViewContainer"] {
-          font-family: "Montserrat", "Poppins", "Roboto", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        }
+        .block-container h1, .block-container h2, .block-container h3,
+        [data-testid="stMarkdownContainer"] h1,
+        [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stMarkdownContainer"] h3 {
+          font-family: "Poppins", "Montserrat", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         }
 
         /* Readable text selection/highlight using approved palette */
@@ -49,6 +85,31 @@ def apply_theme():
         .stApp, [data-testid="stAppViewContainer"] {
           color: var(--text-900) !important;
           background-color: var(--bg-light) !important;
+        }
+
+        /*
+         * Do NOT hide the app header: when the sidebar is collapsed, Streamlit puts the only
+         * “expand sidebar” control (stExpandSidebarButton) and the main menu in stHeader. Hiding
+         * the header traps users with no hamburger and no way to reopen the panel.
+         * Keep the strip light/minimal instead of display:none.
+         */
+        header[data-testid="stHeader"],
+        .stApp > header {
+          display: block !important;
+          background: #F1F5F9 !important;
+          border-bottom: 1px solid #E2E8F0 !important;
+          box-shadow: none !important;
+        }
+        header[data-testid="stHeader"] [data-testid="stToolbar"],
+        .stApp > header [data-testid="stToolbar"] {
+          background: transparent !important;
+          min-height: 2.75rem !important;
+        }
+        div[data-testid="stDecoration"] {
+          display: none !important;
+        }
+        [data-testid="stMain"] {
+          padding-top: 0 !important;
         }
 
         .block-container {
@@ -161,17 +222,18 @@ def apply_theme():
           box-shadow: none !important;
         }
 
+        /* Buttons: modern navy primary, teal hover */
         button[kind="primary"],
         div.stButton > button[kind="primary"] {
-          background: linear-gradient(135deg, var(--secondary-teal) 0%, #1F8579 100%) !important;
+          background: var(--primary-navy) !important;
           color: #FFFFFF !important;
-          border-color: var(--secondary-teal) !important;
+          border-color: var(--primary-navy) !important;
         }
 
         button[kind="primary"]:hover,
         div.stButton > button[kind="primary"]:hover {
-          background: linear-gradient(135deg, #1F8579 0%, #176A61 100%) !important;
-          border-color: #176A61 !important;
+          background: var(--secondary-teal) !important;
+          border-color: var(--secondary-teal) !important;
           color: #FFFFFF !important;
         }
 
@@ -187,6 +249,17 @@ def apply_theme():
           background: #E8EEF3 !important;
           border-color: rgba(42,157,143,0.45) !important;
           color: #24486B !important;
+        }
+
+        /* Secondary / default buttons: keep label text dark (fixes white text on light fill) */
+        div.stButton > button:not([kind="primary"]) span,
+        div.stButton > button:not([kind="primary"]) p,
+        button[kind="secondary"] span,
+        button[kind="secondary"] p,
+        div[data-testid="stFormSubmitButton"] > button:not([kind="primary"]) span,
+        div[data-testid="stFormSubmitButton"] > button:not([kind="primary"]) p {
+          color: #1E3A5F !important;
+          -webkit-text-fill-color: #1E3A5F !important;
         }
 
         /* Disabled button readability */
@@ -241,8 +314,12 @@ def apply_theme():
           box-shadow: 0 0 0 2px rgba(42,157,143,0.16) !important;
         }
 
-        /* Selectbox and multiselect shell */
-        div[data-baseweb="select"] > div {
+        /*
+         * Selectbox / multiselect only (scoped). Bare div[data-baseweb="select"] would also match
+         * ⋮ → Settings → “Choose app theme” (Base Web select) and block theme changes / clicks.
+         */
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
           background-color: #ffffff !important;
           border: 1px solid #CBD5E1 !important;
           border-radius: 6px !important;
@@ -250,17 +327,92 @@ def apply_theme():
           min-height: 40px !important;
         }
 
-        /* Selected value (closed state) */
-        div[data-baseweb="select"] span {
-          color: var(--text-900) !important;
+        /* Selected value (closed state) — Base Web can nest text in divs; force dark text */
+        [data-testid="stSelectbox"] div[data-baseweb="select"] span,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] p,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"],
+        [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] *,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] span,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] p,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] [role="combobox"],
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] [role="combobox"] * {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+        }
+        [data-testid="stSelectbox"] div[data-baseweb="select"] svg,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] svg {
+          fill: #64748B !important;
+          color: #64748B !important;
         }
 
-        div[data-baseweb="select"] > div:hover {
+        /* Selectbox single-value text (Base Web uses <input> + inner divs; theme can leave them white on white) */
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] input {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+          caret-color: #1E293B !important;
+          background-color: #FFFFFF !important;
+        }
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input::placeholder,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] input::placeholder {
+          color: #64748B !important;
+          -webkit-text-fill-color: #64748B !important;
+          opacity: 1 !important;
+        }
+        [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] > div,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] [role="group"],
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] [role="combobox"] > div,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] [role="group"] {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+        }
+        [data-testid="stSelectbox"] label,
+        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] p {
+          color: #334155 !important;
+        }
+
+        /*
+         * Selectbox value in the control “bar” (Streamlit + Base Web often set bodyText near-white for dark UI).
+         * Force every text node inside the widget shell — dropdown list is portaled outside this tree.
+         */
+        [data-testid="stSelectbox"] div[data-baseweb="select"] *:not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon) {
+          color: #0F172A !important;
+          -webkit-text-fill-color: #0F172A !important;
+        }
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input:-webkit-autofill,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input:-webkit-autofill:hover,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #0F172A !important;
+          -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+          box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+        }
+        [data-testid="stSelectbox"] div[data-baseweb="select"] input::selection {
+          background: #A8DADC !important;
+          color: #0F172A !important;
+          -webkit-text-fill-color: #0F172A !important;
+        }
+
+        /* Multiselect control bar (same bodyText leakage as selectbox) */
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] *:not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon) {
+          color: #0F172A !important;
+          -webkit-text-fill-color: #0F172A !important;
+        }
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] input:-webkit-autofill,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #0F172A !important;
+          -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+          box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+        }
+
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div:hover {
           border-color: rgba(42,157,143,0.75) !important;
         }
 
-        div[data-baseweb="select"] > div:focus-within,
-        div[data-baseweb="select"]:focus-within > div,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
+        [data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within > div,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div:focus-within,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"]:focus-within > div,
         [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
         [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
           box-shadow: none !important;
@@ -268,8 +420,10 @@ def apply_theme():
 
         [data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
         [data-testid="stMultiSelect"] div[data-baseweb="select"] > div:focus-within,
-        div[data-baseweb="select"] > div[aria-expanded="true"],
-        div[data-baseweb="select"] > div[aria-expanded="true"]:focus-within {
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div[aria-expanded="true"],
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div[aria-expanded="true"]:focus-within,
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div[aria-expanded="true"],
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div[aria-expanded="true"]:focus-within {
           border-color: var(--secondary-teal) !important;
           box-shadow: 0 0 0 2px rgba(42,157,143,0.16) !important;
         }
@@ -287,28 +441,146 @@ def apply_theme():
           fill: #176A61 !important;
         }
 
-        /* Dropdown menu and selected items */
+        /* Dropdown menu — light surface + dark text (readable) */
         div[role="listbox"] ul,
         ul[role="listbox"] {
-          border: 1px solid #475569 !important;
+          border: 1px solid #CBD5E1 !important;
           box-shadow: 0 12px 28px rgba(15,23,42,0.10) !important;
-          background: #1F2937 !important;
+          background: #FFFFFF !important;
         }
 
         li[role="option"],
         ul[role="listbox"] li {
-          color: #F1F5F9 !important;
+          color: #1E293B !important;
         }
 
         li[role="option"]:hover,
         ul[role="listbox"] li:hover {
-          background: rgba(42,157,143,0.15) !important;
+          background: #EEF6F5 !important;
         }
 
         li[role="option"][aria-selected="true"],
         ul[role="listbox"] li[aria-selected="true"] {
-          background: rgba(42,157,143,0.15) !important;
-          color: #E2E8F0 !important;
+          background: #D8F1EC !important;
+          color: #0F172A !important;
+        }
+
+        /* Base Web popover menus (multiselect / “Create new…” — often dark by default) */
+        [data-baseweb="popover"],
+        div[data-baseweb="popover"] {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+          box-shadow: 0 12px 28px rgba(15,23,42,0.12) !important;
+        }
+        [data-baseweb="popover"] li,
+        [data-baseweb="popover"] [role="option"],
+        [data-baseweb="popover"] div[role="option"],
+        ul[data-baseweb="menu"] li {
+          color: #1E293B !important;
+          background-color: #FFFFFF !important;
+        }
+        [data-baseweb="popover"] li:hover,
+        [data-baseweb="popover"] [role="option"]:hover {
+          background-color: #EEF6F5 !important;
+        }
+        [data-baseweb="popover"] [aria-selected="true"] {
+          background-color: #D8F1EC !important;
+          color: #0F172A !important;
+        }
+
+        /* Nested menus + “Create new…” row (Base Web can leave header/options dark-on-dark) */
+        ul[data-baseweb="menu"],
+        [data-baseweb="menu"] {
+          background-color: #FFFFFF !important;
+          border-color: #CBD5E1 !important;
+        }
+        [data-baseweb="menu"] li,
+        [data-baseweb="menu"] [role="option"],
+        [data-baseweb="popover"] [data-baseweb="menu"] li,
+        [data-baseweb="popover"] [data-baseweb="menu"] [role="option"] {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+          background-color: #FFFFFF !important;
+        }
+        [data-baseweb="popover"] [data-baseweb="menu"] li:hover,
+        [data-baseweb="popover"] [data-baseweb="menu"] [role="option"]:hover {
+          background-color: #EEF6F5 !important;
+        }
+
+        /*
+         * Base Web “Layer” + nested popover wrappers (Select/Multiselect empty / max_selections row).
+         * Without this, portaled dropdowns can keep a dark outer box while the message sits on white.
+         */
+        [data-baseweb="layer"] {
+          background: transparent !important;
+        }
+        [data-baseweb="popover"] > div,
+        [data-baseweb="popover"] > div > div {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+        }
+        [role="listbox"] {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+        }
+        li[role="option"][aria-disabled="true"] {
+          background-color: #F1F5F9 !important;
+          color: #334155 !important;
+          -webkit-text-fill-color: #334155 !important;
+          opacity: 1 !important;
+        }
+
+        /* Base Web Tooltip (some builds use this instead of menu empty state) */
+        [data-baseweb="tooltip"],
+        div[data-baseweb="tooltip"] {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+          border: 1px solid #CBD5E1 !important;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+        }
+        [data-baseweb="tooltip"] div {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+        }
+
+        /* Streamlit Multiselect styled-components: span[aria-disabled='true'] empty / hint rows */
+        [data-baseweb="popover"] span[aria-disabled="true"],
+        [data-testid="stSelectbox"] div[data-baseweb="select"] span[aria-disabled="true"],
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] span[aria-disabled="true"] {
+          background: #F1F5F9 !important;
+          color: #334155 !important;
+        }
+
+        /* Portaled popover: wrapper divs often keep a dark fill — force light (options use li rules above) */
+        [data-baseweb="popover"] > div,
+        [data-baseweb="popover"] > div > div,
+        [data-baseweb="popover"] [data-baseweb="menu"],
+        [data-baseweb="popover"] ul[role="listbox"] {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+        }
+        [data-baseweb="popover"] * {
+          outline-color: #2A9D8F !important;
+        }
+
+        /*
+         * Multiselect @ max_selections: VirtualDropdown empty state uses nested divs with theme “dark” fills.
+         * Force light gray/white on all divs inside the popover, then restore option hover/selected on <li>.
+         */
+        [data-baseweb="layer"] [data-baseweb="popover"] {
+          background-color: #FFFFFF !important;
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12) !important;
+        }
+        .stApp [data-baseweb="popover"] div {
+          background-color: #FFFFFF !important;
+        }
+        .stApp [data-baseweb="popover"] li[role="option"]:hover,
+        .stApp [data-baseweb="popover"] li[role="option"]:hover * {
+          background-color: #EEF6F5 !important;
+        }
+        .stApp [data-baseweb="popover"] li[aria-selected="true"],
+        .stApp [data-baseweb="popover"] li[aria-selected="true"] * {
+          background-color: #D8F1EC !important;
         }
 
         /* Tabs readability (fixes white-on-light labels) */
@@ -340,7 +612,7 @@ def apply_theme():
           accent-color: var(--secondary-teal) !important;
         }
 
-        /* Sliders */
+        /* Sliders — teal fill only (no red primary accent) */
         [data-baseweb="slider"] [role="slider"] {
           background: var(--secondary-teal) !important;
           border-color: #1F8579 !important;
@@ -350,7 +622,6 @@ def apply_theme():
         [data-baseweb="slider"] > div > div > div {
           background: linear-gradient(90deg, #8FD3C6 0%, #2A9D8F 100%) !important;
         }
-
         /* Number input stepper buttons */
         [data-testid="stNumberInput"] button {
           color: #F8FAFC !important;
@@ -393,53 +664,18 @@ def apply_theme():
           color: #1E293B !important;
         }
 
-        /* Data editor readability and softer row rhythm */
-        div[data-testid="stDataFrame"] [role="columnheader"] {
-          font-size: 0.95rem !important;
-          font-weight: 700 !important;
-          color: var(--primary-navy) !important;
-          background: #E8EEF3 !important;
-        }
-        div[data-testid="stDataFrame"] [role="gridcell"] {
-          font-size: 0.93rem !important;
-          line-height: 1.5 !important;
-          color: var(--text-900) !important;
-          background: #FFFFFF !important;
-          border-color: #E2E8F0 !important;
-        }
-        div[data-testid="stDataFrame"] [role="row"]:nth-child(even) [role="gridcell"] {
-          background: #FAFCFF !important;
-        }
-        div[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"] {
-          background: #EEF6F5 !important;
-        }
-
-        /* Force light theme for all Streamlit dataframe/table widgets */
+        /*
+         * st.dataframe and st.data_editor both use Glide on a canvas. Rules targeting [role=gridcell],
+         * .gdg-cell, .gdg-*, inline --gdg-* variables, and blanket span/p color inside the grid fight
+         * Streamlit’s renderer and consistently produced white-on-white cell text across themes.
+         * Keep only outer chrome; let the active Streamlit theme (⋮ → Settings) drive Glide colors.
+         */
         div[data-testid="stDataFrame"],
-        div[data-testid="stDataFrame"] * {
-          color: #1E293B !important;
-        }
-        div[data-testid="stDataFrame"] [role="grid"],
-        div[data-testid="stDataFrame"] [data-testid="stDataFrameResizable"],
-        div[data-testid="stDataFrame"] .glideDataEditor,
-        div[data-testid="stDataFrame"] .gdg-container,
-        div[data-testid="stDataFrame"] .gdg,
-        div[data-testid="stDataFrame"] .gdg-outer {
+        div[data-testid="stDataEditor"] {
           background: #FFFFFF !important;
-        }
-        div[data-testid="stDataFrame"] [role="rowheader"],
-        div[data-testid="stDataFrame"] .gdg-cell,
-        div[data-testid="stDataFrame"] .gdg-cell * {
-          background: #FFFFFF !important;
-          color: #1E293B !important;
-          border-color: #E2E8F0 !important;
-        }
-        div[data-testid="stDataFrame"] [role="columnheader"],
-        div[data-testid="stDataFrame"] .gdg-header,
-        div[data-testid="stDataFrame"] .gdg-header * {
-          background: #F1F5F9 !important;
-          color: #1E293B !important;
-          border-color: #E2E8F0 !important;
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 8px !important;
+          color-scheme: light !important;
         }
 
         div[data-testid="stTable"],
@@ -459,14 +695,73 @@ def apply_theme():
           font-weight: 600 !important;
         }
 
-        /* Dataframe outer shell (some Streamlit builds paint this dark) */
-        div[data-testid="stDataFrame"] {
-          background: #FFFFFF !important;
-          border: 1px solid #E2E8F0 !important;
-          border-radius: 8px !important;
+        /* In-cell editor overlay (typed input while editing a cell) */
+        div[data-testid="stDataFrame"] textarea,
+        div[data-testid="stDataEditor"] textarea,
+        div[data-testid="stDataFrame"] input:not([type="hidden"]),
+        div[data-testid="stDataEditor"] input:not([type="hidden"]) {
+          background-color: #FFFFFF !important;
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+          border: 1px solid #CBD5E1 !important;
+          caret-color: #1E293B !important;
         }
-        div[data-testid="stDataFrame"] > div {
-          background: #FFFFFF !important;
+        /* Dataframe / data editor toolbar (often renders dark with low-contrast icons) */
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"] button,
+        [data-testid="stDataEditor"] [data-testid="stElementToolbar"] button,
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"] [role="button"],
+        [data-testid="stDataEditor"] [data-testid="stElementToolbar"] [role="button"],
+        [data-testid="stElementToolbar"] button,
+        [data-testid="stElementToolbar"] [role="button"],
+        [data-testid="stToolbar"] button,
+        [data-testid="stHeaderToolbar"] button,
+        button[kind="header"] {
+          background: #F1F5F9 !important;
+          color: #1E293B !important;
+          border: 1px solid #CBD5E1 !important;
+        }
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"] span,
+        [data-testid="stDataEditor"] [data-testid="stElementToolbar"] span,
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"] p,
+        [data-testid="stDataEditor"] [data-testid="stElementToolbar"] p,
+        [data-testid="stElementToolbar"] span,
+        [data-testid="stElementToolbar"] p {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+        }
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"] svg,
+        [data-testid="stDataEditor"] [data-testid="stElementToolbar"] svg,
+        [data-testid="stElementToolbar"] svg,
+        [data-testid="stToolbar"] svg,
+        [data-testid="stHeaderToolbar"] svg,
+        button[kind="header"] svg {
+          fill: #1E293B !important;
+          color: #1E293B !important;
+        }
+
+        /* st.download_button secondary styling (e.g. “Download as CSV” near dataframes) */
+        [data-testid="stDownloadButton"] button,
+        [data-testid="stDownloadButton"] a {
+          background: #F1F5F9 !important;
+          color: #1E293B !important;
+          border: 1px solid #CBD5E1 !important;
+        }
+        [data-testid="stDownloadButton"] button span,
+        [data-testid="stDownloadButton"] button p,
+        [data-testid="stDownloadButton"] a span {
+          color: #1E293B !important;
+          -webkit-text-fill-color: #1E293B !important;
+        }
+        [data-testid="stDownloadButton"] svg {
+          fill: #1E293B !important;
+        }
+
+        /* Step progress bars — teal fill, neutral track (avoid default red accent) */
+        [data-testid="stProgress"] > div > div {
+          background-color: #E2E8F0 !important;
+        }
+        [data-testid="stProgress"] > div > div > div {
+          background-color: #2A9D8F !important;
         }
 
         /* Card containers for input sections */
@@ -477,6 +772,54 @@ def apply_theme():
           padding: 16px 20px;
           box-shadow: 0 1px 2px rgba(30,58,95,0.06);
           min-height: 100%;
+        }
+
+        /* Section header ribbons */
+        .section-header {
+          width: 100%;
+          box-sizing: border-box;
+          margin: 6px 0 10px 0;
+          letter-spacing: 0.3px;
+        }
+        .section-header--solid {
+          background-color: var(--secondary-teal);
+          color: #FFFFFF;
+          font-family: "Poppins", "Montserrat", "Inter", sans-serif;
+          font-size: 18px;
+          font-weight: 600;
+          padding: 10px 16px;
+          border-radius: 6px;
+        }
+        .section-header--accent {
+          background-color: #F1F5F9;
+          border-left: 6px solid var(--secondary-teal);
+          color: var(--primary-navy);
+          font-family: "Poppins", "Montserrat", "Inter", sans-serif;
+          font-size: 18px;
+          font-weight: 600;
+          padding: 12px 16px;
+          border-radius: 6px;
+        }
+        .section-header--gradient {
+          background: linear-gradient(90deg, var(--secondary-teal) 0%, var(--primary-navy) 100%);
+          color: #FFFFFF;
+          font-family: "Montserrat", "Poppins", "Inter", sans-serif;
+          font-size: 18px;
+          font-weight: 600;
+          padding: 10px 20px;
+          border-radius: 6px;
+        }
+        .section-header--sub {
+          background-color: #F1F5F9;
+          border-left: none;
+          border-bottom: 2px solid rgba(42, 157, 143, 0.35);
+          color: var(--primary-navy);
+          font-family: "Poppins", "Montserrat", "Inter", sans-serif;
+          font-size: 16px;
+          font-weight: 600;
+          padding: 10px 14px;
+          border-radius: 6px;
+          margin-top: 4px;
         }
 
         /* Compact label-left, input-right rows (used on Results selectors) */
@@ -552,6 +895,13 @@ def apply_theme():
           font-weight: 600 !important;
           padding-top: 2px !important;
           padding-bottom: 2px !important;
+        }
+        /* Sidebar step progress: teal fill instead of default red accent */
+        [data-testid="stSidebar"] [data-testid="stProgress"] > div > div > div {
+          background-color: #2A9D8F !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stProgress"] > div > div {
+          background-color: #E2E8F0 !important;
         }
         .sidebar-active-item {
           background: #D8F1EC;

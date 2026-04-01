@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 
@@ -17,6 +17,7 @@ from core.vft_model import Attribute
 st.set_page_config(page_title="MCDA — VFT Value Functions", layout="wide")
 apply_theme()
 st.title("Step 3b: Value Functions (VFT)")
+section_header("VFT Value Functions", variant="gradient")
 
 guard_page("pages/3b_vft_value_functions.py", require_scenario=True)
 sync_method_from_scenario()
@@ -64,7 +65,7 @@ matrix_df = meas_repo.load_matrix_ui(scenario_id)
 crit_names = [c["name"] for c in existing_crit]
 
 # ─── Overview status bar ──────────────────────────────────────────────────────
-st.subheader("📋 Criteria Overview")
+section_header("Criteria Overview", variant="accent")
 overview_rows = []
 for crit in existing_crit:
     cname = crit["name"]
@@ -107,7 +108,7 @@ else:
 st.divider()
 
 # ─── Per-criterion configurator ───────────────────────────────────────────────
-st.subheader("Configure Value Function")
+section_header("Configure Value Function", variant="sub")
 st.caption("Select a criterion from the tabs below and define its value function, then click Save.")
 
 crit_tabs = st.tabs([f"{'✅' if existing_vfs.get(c['name']) else '⚙️'} {c['name']}" for c in existing_crit])

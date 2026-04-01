@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from sqlalchemy import text
 
 from app.app_context import guard_page, sync_method_from_scenario
@@ -26,6 +26,7 @@ sync_method_from_scenario()
 render_sidebar("pages/5_sensitivity.py")
 
 st.title("Step 5: Sensitivity Analysis & Preference Set Comparison")
+section_header("Sensitivity Analysis & Preference Set Comparison", variant="gradient")
 
 engine = get_engine()
 pref_repo = PreferenceRepo(engine)
@@ -705,7 +706,7 @@ def render_grouped_stacked_score_chart(
     selection_order: list[str],
     alt_order: list[str],
 ):
-    st.subheader("Score and Criterion Contribution Comparison")
+    section_header("Score and Criterion Contribution Comparison", variant="accent")
     st.caption(
         "Within each alternative, stacked bars appear in selected-set order. "
         "Bar height shows total score and stacked slices show criterion contribution. "
@@ -1170,7 +1171,7 @@ def render_topsis_sandbox_advanced(
     if norm_df_base is None or norm_df_base.empty:
         return
 
-    st.subheader("Additional Sandbox Views")
+    section_header("Additional Sandbox Views", variant="accent")
     st.caption("These views extend the sandbox without creating a separate TOPSIS section.")
 
     crits = list(norm_df_base.columns)
@@ -1544,7 +1545,7 @@ def render_vft_sandbox_advanced_inline(
     if not attributes or not alt_names:
         return
 
-    st.subheader("Additional Sandbox Views")
+    section_header("Additional Sandbox Views", variant="accent")
     st.caption("These views extend the sandbox without creating a separate VFT section.")
 
     ranked_alts = sorted(base_total_scores.items(), key=lambda item: item[1], reverse=True)
@@ -2227,7 +2228,7 @@ if cmp_mode == "Same scenario - multiple preference sets":
                 render_comparison_section(cmp, "pref_comparison.csv")
 
 else:
-    st.subheader("Cross-Scenario Comparison")
+    section_header("Cross-Scenario Comparison", variant="accent")
     st.caption(
         "Select up to 5 preference sets from different scenarios. Comparison is allowed only when the "
         "underlying alternatives, criteria, and measurement data are identical."

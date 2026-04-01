@@ -2,7 +2,7 @@ import bootstrap  # noqa: F401
 
 import pandas as pd
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 from sqlalchemy import text
@@ -113,7 +113,7 @@ st.caption("View detailed results for any saved run.")
 st.divider()
 
 # ─── Selectors ────────────────────────────────────────────────────────────────
-st.subheader("Select Run to View")
+section_header("Select Run to View", variant="gradient")
 
 
 def _inline_single_pick(label: str, options: list[str], default_value: str, format_func, key: str) -> str:
@@ -493,8 +493,7 @@ criterion to the total score. Tall segments = high contribution (high utility ×
 
 elif current_method == "ahp":
     st.warning(
-        "No AHP engine results are stored for this run yet. Pairwise comparison and priority derivation "
-        "are not implemented — switch the scenario to **TOPSIS** or **VFT** in Step 1, or re-run after a future AHP release."
+        "**AHP** is not supported in this app. Create a **TOPSIS** or **VFT** scenario in Step 1 to view supported results."
     )
 else:
     st.info(f"Results view for method `{current_method}` is not specialized in this build. Showing raw scores if available.")

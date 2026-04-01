@@ -2,7 +2,7 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from app.app_context import guard_page, sync_method_from_scenario
 from app.sidebar_nav import render_sidebar
 import pandas as pd
@@ -15,6 +15,7 @@ from services.scenario_share_service import ScenarioShareService
 st.set_page_config(page_title="MCDA — History", layout="wide")
 apply_theme()
 st.title("Step 7: History, Logs & Export")
+section_header("History, Logs & Export", variant="gradient")
 
 guard_page("pages/7_history.py", require_scenario=True)
 sync_method_from_scenario()
@@ -79,7 +80,7 @@ pref_id_to_name = {r["preference_set_id"]: r["name"] for r in pref_rows}
 # ----------------------------
 # Runs table
 # ----------------------------
-st.subheader("Run History (Current Scenario)")
+section_header("Run History (Current Scenario)", variant="accent")
 
 with engine.begin() as conn:
     cols = conn.execute(
@@ -141,7 +142,7 @@ else:
     # ----------------------------
     # Select a run for actions
     # ----------------------------
-    st.subheader("Open or Manage a Run")
+    section_header("Open or Manage a Run", variant="sub")
 
     run_options = runs_df["run_id"].tolist()
 
@@ -214,7 +215,7 @@ else:
     # ----------------------------
     # Delete run (double confirmation)
     # ----------------------------
-    st.subheader("Delete Run")
+    section_header("Delete Run", variant="sub")
 
     token = f"DELETE {run_id[:8]}"
     st.warning(
@@ -242,7 +243,7 @@ st.divider()
 # ----------------------------
 # Export / Share Scenario (.mcda)
 # ----------------------------
-st.subheader("📦 Export Scenario")
+section_header("Export Scenario", variant="accent")
 
 st.info(
     "Export this scenario as a `.mcda` file — a portable snapshot containing all inputs, "

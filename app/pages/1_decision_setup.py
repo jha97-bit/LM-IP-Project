@@ -1,7 +1,7 @@
 import bootstrap  # noqa: F401
 
 import streamlit as st
-from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE
+from app.ui_theme import apply_theme, BLUE_SCALE, TEAL_SCALE, BLUE_TEAL_SCALE, DISCRETE_PALETTE, section_header
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -15,6 +15,7 @@ from services.scenario_share_service import ScenarioShareService
 st.set_page_config(page_title="MCDA — Decision Setup", layout="wide")
 apply_theme()
 st.title("Step 1: Decision & Scenario Setup")
+section_header("Decision & Scenario Setup", variant="gradient")
 st.markdown(
     """
     <style>
@@ -55,7 +56,7 @@ st.caption("Set the business decision context, then choose or create a scenario.
 st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ─── 1A: Decision ──────────────────────────────────────────────────────────
-st.subheader("1A. Select or Create a Decision")
+section_header("1A. Select or Create a Decision", variant="accent")
 st.caption("A Decision is the top-level business problem you are solving.")
 
 decisions = decision_repo.list_decisions(limit=100) or []
@@ -68,15 +69,15 @@ default_decision = st.session_state.get("decision_id") or (decision_ids[0] if de
 if default_decision not in decision_options:
     default_decision = DEC_CREATE
 
-picked_decision = st.multiselect(
+# Use selectbox (not multiselect @ max_selections=1) — multiselect shows a broken dark empty dropdown when at limit.
+_dec_idx = decision_options.index(default_decision) if default_decision in decision_options else 0
+selected_decision = st.selectbox(
     "Decision",
     options=decision_options,
-    default=[default_decision],
-    max_selections=1,
+    index=_dec_idx,
     format_func=lambda x: DEC_CREATE if x == DEC_CREATE else f"{decision_id_to_title.get(x, x)} ({x[:8]}…)",
     key="decision_pick_step1",
 )
-selected_decision = picked_decision[0] if picked_decision else DEC_CREATE
 
 if selected_decision == DEC_CREATE:
     c1, c2 = st.columns(2)
@@ -145,7 +146,7 @@ with st.expander("Import a colleague's scenario (.mcda file)", expanded=False):
 st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ─── 1B: Scenario ───────────────────────────────────────────────────────────
-st.subheader("1B. Select or Create a Scenario")
+section_header("1B. Select or Create a Scenario", variant="accent")
 st.caption("A Scenario is one versioned configuration of inputs under a decision.")
 
 if not st.session_state.get("decision_id"):
@@ -169,22 +170,21 @@ default_scenario = st.session_state.get("scenario_id") or (scenario_ids[0] if sc
 if default_scenario not in scenario_options:
     default_scenario = SCEN_CREATE
 
-picked_scenario = st.multiselect(
+_scen_idx = scenario_options.index(default_scenario) if default_scenario in scenario_options else 0
+selected_scenario = st.selectbox(
     "Scenario",
     options=scenario_options,
-    default=[default_scenario],
-    max_selections=1,
+    index=_scen_idx,
     format_func=lambda x: (
         SCEN_CREATE if x == SCEN_CREATE else f"{scenario_id_to_meta[x]['name']} [{scenario_id_to_meta[x]['method_type'].upper()}] ({x[:8]}…)"
     ),
     key=f"scenario_pick_step1_{st.session_state['decision_id']}",
 )
-selected_scenario = picked_scenario[0] if picked_scenario else SCEN_CREATE
 
 creating_new_scenario = selected_scenario == SCEN_CREATE
 
 # ─── Method Selection ───────────────────────────────────────────────────────
-st.subheader("🧮 Analysis Method")
+section_header("Analysis Method", variant="sub")
 
 locked_method = None
 if not creating_new_scenario and selected_scenario in scenario_id_to_meta:
@@ -196,13 +196,13 @@ current_method = locked_method or st.session_state.get("method_choice") or "tops
 METHOD_LABELS = {
     "topsis": "TOPSIS",
     "vft": "VFT — Value Function Transformation",
-    "ahp": "AHP — Analytic Hierarchy Process",
+    "ahp": "Legacy (not supported — create a new scenario)",
 }
 
-method_col1, method_col2, method_col3 = st.columns(3, gap="large")
+method_col1, method_col2 = st.columns(2, gap="large")
 with method_col1:
     if st.button(
-        "📐 TOPSIS",
+        "TOPSIS",
         type="primary" if current_method == "topsis" else "secondary",
         use_container_width=True,
         disabled=bool(locked_method),
@@ -214,7 +214,7 @@ with method_col1:
 
 with method_col2:
     if st.button(
-        "📈 VFT",
+        "VFT",
         type="primary" if current_method == "vft" else "secondary",
         use_container_width=True,
         disabled=bool(locked_method),
@@ -224,20 +224,13 @@ with method_col2:
         st.rerun()
     st.caption("Utility-based scoring with custom value functions per criterion.")
 
-with method_col3:
-    if st.button(
-        "⚖️ AHP",
-        type="primary" if current_method == "ahp" else "secondary",
-        use_container_width=True,
-        disabled=bool(locked_method),
-        key="method_btn_ahp",
-    ):
-        st.session_state["method_choice"] = "ahp"
-        st.rerun()
-    st.caption("Pairwise comparisons → priority weights (engine coming soon).")
-
 method_choice = st.session_state.get("method_choice")
-if locked_method:
+if locked_method == "ahp":
+    st.warning(
+        "This scenario is labeled **AHP**, which is no longer supported in the app. "
+        "Create a **new scenario** and choose **TOPSIS** or **VFT** to continue."
+    )
+elif locked_method:
     st.info(
         f"This scenario is locked to **{METHOD_LABELS.get(locked_method, locked_method.upper())}**. "
         "Create a new scenario if you want to use a different method."
@@ -337,5 +330,11 @@ if st.session_state.get("scenario_id"):
         if st.button("← Back to Home", key="nav_back_bottom"):
             st.switch_page("streamlit_app.py")
     with col_next:
-        if st.button("Next: Data Input →", type="primary", key="nav_next_bottom"):
+        _blocked = st.session_state.get("method_choice") == "ahp"
+        if st.button(
+            "Next: Data Input →",
+            type="primary",
+            key="nav_next_bottom",
+            disabled=_blocked,
+        ):
             st.switch_page("pages/2_data_input.py")
