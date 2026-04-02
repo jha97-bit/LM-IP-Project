@@ -51,7 +51,7 @@ def apply_theme():
           color-scheme: light;
         }
 
-        /* Streamlit host: steer accent away from default red on inputs */
+        /* Align host chrome with teal primary ([theme] primaryColor); navy for our chrome */
         .stApp {
           --primary-color: #1E3A5F !important;
         }
@@ -213,42 +213,100 @@ def apply_theme():
         }
 
         div.stButton > button,
-        div[data-testid="stFormSubmitButton"] > button,
-        button[kind="primary"],
-        button[kind="secondary"] {
+        div[data-testid="stFormSubmitButton"] > button {
           border-radius: 10px !important;
-          border: 1px solid rgba(37,99,235,0.25) !important;
-          transition: all 0.15s ease !important;
-          box-shadow: none !important;
+          transition: background 0.15s ease, box-shadow 0.12s ease, transform 0.08s ease, border-color 0.15s ease !important;
         }
 
-        /* Buttons: modern navy primary, teal hover */
+        /* Primary — raised navy (3D: gradient + inset highlight + depth shadow) */
         button[kind="primary"],
         div.stButton > button[kind="primary"] {
-          background: var(--primary-navy) !important;
+          background: linear-gradient(180deg, #2A4F7A 0%, #1E3A5F 42%, #162E4A 100%) !important;
           color: #FFFFFF !important;
-          border-color: var(--primary-navy) !important;
+          border: 1px solid #132842 !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            0 4px 12px rgba(30, 58, 95, 0.38),
+            0 1px 3px rgba(15, 23, 42, 0.14) !important;
         }
 
         button[kind="primary"]:hover,
         div.stButton > button[kind="primary"]:hover {
-          background: var(--secondary-teal) !important;
-          border-color: var(--secondary-teal) !important;
+          background: linear-gradient(180deg, #42C4B0 0%, #2A9D8F 42%, #1F8579 100%) !important;
+          border-color: #5FD4C0 !important;
           color: #FFFFFF !important;
+          filter: brightness(1.04) !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            0 0 0 2px rgba(42, 157, 143, 0.55),
+            0 6px 18px rgba(31, 133, 121, 0.48),
+            0 2px 5px rgba(15, 23, 42, 0.12) !important;
         }
 
+        /* Focus: teal ring (Base Web often uses theme primary red for :focus) */
+        button[kind="primary"]:focus,
+        button[kind="primary"]:focus-visible,
+        div.stButton > button[kind="primary"]:focus,
+        div.stButton > button[kind="primary"]:focus-visible {
+          outline: none !important;
+          border-color: #8FD3C6 !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.18),
+            0 0 0 3px rgba(42, 157, 143, 0.65),
+            0 4px 14px rgba(30, 58, 95, 0.35) !important;
+        }
+
+        button[kind="primary"]:active,
+        div.stButton > button[kind="primary"]:active {
+          transform: translateY(1px) !important;
+          filter: none !important;
+          box-shadow:
+            inset 0 2px 5px rgba(0, 0, 0, 0.22),
+            0 2px 6px rgba(30, 58, 95, 0.28) !important;
+        }
+
+        /* Secondary / default — light raised surface */
         button[kind="secondary"],
         div.stButton > button:not([kind="primary"]) {
-          background: var(--surface-light) !important;
+          background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 52%, #E8EEF3 100%) !important;
           color: var(--primary-navy) !important;
-          border-color: rgba(30,58,95,0.25) !important;
+          border: 1px solid #B8C4D4 !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.95),
+            0 3px 8px rgba(15, 23, 42, 0.1),
+            0 1px 2px rgba(15, 23, 42, 0.07) !important;
         }
 
         button[kind="secondary"]:hover,
         div.stButton > button:not([kind="primary"]):hover {
-          background: #E8EEF3 !important;
-          border-color: rgba(42,157,143,0.45) !important;
-          color: #24486B !important;
+          background: linear-gradient(180deg, #FFFFFF 0%, #E6FAF6 55%, #D8F1EC 100%) !important;
+          border-color: #2A9D8F !important;
+          color: #176A61 !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 1),
+            0 0 0 2px rgba(42, 157, 143, 0.35),
+            0 4px 12px rgba(42, 157, 143, 0.2),
+            0 2px 4px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        button[kind="secondary"]:focus,
+        button[kind="secondary"]:focus-visible,
+        div.stButton > button:not([kind="primary"]):focus,
+        div.stButton > button:not([kind="primary"]):focus-visible {
+          outline: none !important;
+          border-color: #2A9D8F !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.95),
+            0 0 0 3px rgba(42, 157, 143, 0.5),
+            0 3px 8px rgba(15, 23, 42, 0.1) !important;
+        }
+
+        button[kind="secondary"]:active,
+        div.stButton > button:not([kind="primary"]):active {
+          transform: translateY(1px) !important;
+          box-shadow:
+            inset 0 2px 4px rgba(148, 163, 184, 0.35),
+            0 1px 3px rgba(15, 23, 42, 0.08) !important;
         }
 
         /* Secondary / default buttons: keep label text dark (fixes white text on light fill) */
@@ -260,6 +318,11 @@ def apply_theme():
         div[data-testid="stFormSubmitButton"] > button:not([kind="primary"]) p {
           color: #1E3A5F !important;
           -webkit-text-fill-color: #1E3A5F !important;
+        }
+        div.stButton > button:not([kind="primary"]):hover span,
+        div.stButton > button:not([kind="primary"]):hover p {
+          color: #176A61 !important;
+          -webkit-text-fill-color: #176A61 !important;
         }
 
         /* Disabled button readability */
@@ -276,6 +339,8 @@ def apply_theme():
           opacity: 1 !important;
           background: #E2E8F0 !important;
           border-color: #CBD5E1 !important;
+          box-shadow: none !important;
+          transform: none !important;
           cursor: not-allowed !important;
         }
 
@@ -606,10 +671,16 @@ def apply_theme():
           box-shadow: 0 2px 8px rgba(42,157,143,0.22) !important;
         }
 
-        /* Checkbox and radio */
-        [data-testid="stCheckbox"] input,
+        /* Checkbox and native radio */
+        [data-testid="stCheckbox"] input {
+          accent-color: var(--secondary-teal) !important;
+        }
         [data-testid="stRadio"] input {
           accent-color: var(--secondary-teal) !important;
+        }
+        /* Base Web horizontal radio (Streamlit): inner dot may ignore accent-color on <input> */
+        [data-testid="stRadio"] [data-baseweb="radio"] div[class*="Inner"] {
+          background: var(--secondary-teal) !important;
         }
 
         /* Sliders — teal fill only (no red primary accent) */
@@ -637,7 +708,7 @@ def apply_theme():
           background: #334155 !important;
         }
 
-        /* Focus ring cleanup */
+        /* Default focus ring — teal, not Streamlit primary red */
         *:focus {
           outline-color: var(--secondary-teal) !important;
         }
@@ -665,10 +736,8 @@ def apply_theme():
         }
 
         /*
-         * st.dataframe and st.data_editor both use Glide on a canvas. Rules targeting [role=gridcell],
-         * .gdg-cell, .gdg-*, inline --gdg-* variables, and blanket span/p color inside the grid fight
-         * Streamlit’s renderer and consistently produced white-on-white cell text across themes.
-         * Keep only outer chrome; let the active Streamlit theme (⋮ → Settings) drive Glide colors.
+         * Glide draws on canvas; theme accent still comes from CSS variables on the host.
+         * Streamlit’s default accent for validation/focus can read as red — pin teal palette here.
          */
         div[data-testid="stDataFrame"],
         div[data-testid="stDataEditor"] {
@@ -676,6 +745,10 @@ def apply_theme():
           border: 1px solid #E2E8F0 !important;
           border-radius: 8px !important;
           color-scheme: light !important;
+          --gdg-accent-color: #2A9D8F !important;
+          --gdg-accent-fg: #FFFFFF !important;
+          --gdg-accent-light: rgba(42, 157, 143, 0.18) !important;
+          --gdg-link-color: #176A61 !important;
         }
 
         div[data-testid="stTable"],
@@ -756,12 +829,88 @@ def apply_theme():
           fill: #1E293B !important;
         }
 
-        /* Step progress bars — teal fill, neutral track (avoid default red accent) */
-        [data-testid="stProgress"] > div > div {
+        /*
+         * st.progress (Base Web): paint the track + value bar explicitly.
+         * Do not use [data-testid="stProgress"] > div > div > div { teal } — it often colors the
+         * full-width wrapper so the “remaining” step area disappears.
+         */
+        [data-testid="stProgress"] [data-baseweb="progress-bar"] {
+          background-color: #E2E8F0 !important;
+          border-radius: 999px !important;
+        }
+        [data-testid="stProgress"] [data-baseweb="progress-bar"] [role="progressbar"] {
           background-color: #E2E8F0 !important;
         }
-        [data-testid="stProgress"] > div > div > div {
+        [data-testid="stProgress"] [data-baseweb="progress-bar"] [role="progressbar"] > div:last-child {
           background-color: #2A9D8F !important;
+          background-image: none !important;
+        }
+
+        /* Sidebar step bar (custom HTML in sidebar_nav — not st.progress) */
+        .mcda-sidebar-progress-wrap {
+          margin: 0 0 10px 0;
+        }
+        .mcda-sidebar-progress-track {
+          height: 8px;
+          width: 100%;
+          border-radius: 999px;
+          background: #E2E8F0;
+          overflow: hidden;
+          box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+        .mcda-sidebar-progress-fill {
+          height: 100%;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #3CB8A8 0%, #2A9D8F 55%, #1E3A5F 100%);
+          transition: width 0.35s ease;
+        }
+
+        /*
+         * Segmented control (st.segmented_control): Streamlit swaps button *kind*, not aria-pressed.
+         * Inactive: data-testid="stBaseButton-segmented_control"
+         * Active:   data-testid="stBaseButton-segmented_controlActive"
+         */
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"],
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_control"] {
+          outline: none !important;
+          background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%) !important;
+          background-color: #F1F5F9 !important;
+          color: #334155 !important;
+          border-color: #CBD5E1 !important;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+        }
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"] span,
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"] p,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_control"] span,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_control"] p {
+          color: #334155 !important;
+          -webkit-text-fill-color: #334155 !important;
+        }
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"],
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_controlActive"] {
+          outline: none !important;
+          z-index: 2 !important;
+          background: linear-gradient(180deg, #3CB8A8 0%, #2A9D8F 52%, #238B7E 100%) !important;
+          background-color: #2A9D8F !important;
+          color: #FFFFFF !important;
+          border-color: #1F8579 !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.22),
+            0 2px 8px rgba(23, 106, 97, 0.38) !important;
+        }
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"] span,
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"] p,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_controlActive"] span,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_controlActive"] p {
+          color: #FFFFFF !important;
+          -webkit-text-fill-color: #FFFFFF !important;
+        }
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"]:focus-visible,
+        [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"]:focus-visible,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_control"]:focus-visible,
+        [data-baseweb="button-group"] button[data-testid="stBaseButton-segmented_controlActive"]:focus-visible {
+          outline: 2px solid #2A9D8F !important;
+          outline-offset: 2px !important;
         }
 
         /* Card containers for input sections */
@@ -895,13 +1044,6 @@ def apply_theme():
           font-weight: 600 !important;
           padding-top: 2px !important;
           padding-bottom: 2px !important;
-        }
-        /* Sidebar step progress: teal fill instead of default red accent */
-        [data-testid="stSidebar"] [data-testid="stProgress"] > div > div > div {
-          background-color: #2A9D8F !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stProgress"] > div > div {
-          background-color: #E2E8F0 !important;
         }
         .sidebar-active-item {
           background: #D8F1EC;

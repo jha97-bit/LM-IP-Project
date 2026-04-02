@@ -261,7 +261,18 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
         )
         overwrite = st.checkbox("Overwrite existing run instead of creating a new one", value=True)
 
-    if st.button("Save Results To Database", type="primary", disabled=save_disabled, key="topsis_save"):
+    _sr_spacer, _sr_actions = st.columns([2, 3])
+    with _sr_actions:
+        _sr_save, _sr_next = st.columns(2)
+        with _sr_save:
+            topsis_save_clicked = st.button(
+                "Save Results To Database", type="primary", disabled=save_disabled, key="topsis_save"
+            )
+        with _sr_next:
+            if st.button("Next: Results", type="primary", key="topsis_save_row_next"):
+                st.switch_page("pages/4_results.py")
+
+    if topsis_save_clicked:
         if preview is None:
             st.warning("Run a preview first.")
             st.stop()
@@ -373,7 +384,7 @@ def render_topsis_run(engine, scenario_id: str, user_name: str) -> None:
 
 
 def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
-    section_header("VFT — Value Function Transformation", variant="gradient")
+    section_header("VFT — Value Focus Thinking", variant="gradient")
     st.caption("Preview the VFT scoring, then save to persist results.")
 
     alt_repo = AlternativeRepo(engine)
@@ -384,7 +395,7 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
 
     nav_left, nav_right = st.columns(2)
     with nav_left:
-        if st.button("Step 3: Value Functions", key="vft_nav_back"):
+        if st.button("Step 3: Value curves", key="vft_nav_back"):
             st.switch_page("pages/3b_vft_value_functions.py")
     with nav_right:
         if st.button("Next: Results", type="primary", key="vft_nav_next"):
@@ -671,7 +682,16 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         st.divider()
         section_header("Save Run", variant="accent")
 
-        if st.button("Save VFT Run", type="primary", key="vft_save"):
+        _vft_sr_spacer, _vft_sr_actions = st.columns([2, 3])
+        with _vft_sr_actions:
+            _vft_save_col, _vft_next_col = st.columns(2)
+            with _vft_save_col:
+                vft_save_clicked = st.button("Save VFT Run", type="primary", key="vft_save")
+            with _vft_next_col:
+                if st.button("Next: Results", type="primary", key="vft_save_row_next"):
+                    st.switch_page("pages/4_results.py")
+
+        if vft_save_clicked:
             alt_map = {a["name"]: a["alternative_id"] for a in existing_alts}
             crit_map = {c["name"]: c["criterion_id"] for c in existing_crit}
             normalized_weights = {
@@ -702,10 +722,12 @@ def render_vft_run(engine, scenario_id: str, user_name: str) -> None:
         st.info("Click **Preview VFT Scoring** to compute the VFT utilities and total scores.")
 
     st.divider()
-    col_prev, col_next = st.columns(2)
-    with col_prev:
-        if st.button("Back To Value Functions", key="vft_run_back_bottom"):
-            st.switch_page("pages/3b_vft_value_functions.py")
-    with col_next:
-        if st.button("Go To Results", key="vft_run_results_bottom"):
-            st.switch_page("pages/4_results.py")
+    _vft_bot_spacer, _vft_bot_actions = st.columns([2, 3])
+    with _vft_bot_actions:
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("Back to value curves", key="vft_run_back_bottom"):
+                st.switch_page("pages/3b_vft_value_functions.py")
+        with col_next:
+            if st.button("Go To Results", type="primary", key="vft_run_results_bottom"):
+                st.switch_page("pages/4_results.py")

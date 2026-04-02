@@ -16,7 +16,7 @@ FLOW_TOPSIS = [
 FLOW_VFT = [
     ("setup", "Decision Setup", "pages/1_decision_setup.py", ""),
     ("data", "Data Input", "pages/2_data_input.py", ""),
-    ("value_functions", "Value Functions", "pages/3b_vft_value_functions.py", ""),
+    ("value_functions", "Value curves", "pages/3b_vft_value_functions.py", ""),
     ("run_model", "Run Model", "pages/3_run_models.py", ""),
     ("results", "Results", "pages/4_results.py", ""),
     ("sensitivity", "Sensitivity", "pages/5_sensitivity.py", ""),

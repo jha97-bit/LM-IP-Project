@@ -42,6 +42,22 @@ if not scenario_id:
 
 st.session_state.setdefault("preference_set_id", None)
 st.session_state.setdefault("data_ready", False)
+st.session_state.setdefault("data_input_step", "structure")
+
+_DATA_INPUT_STEP_LABELS = {
+    "structure": "Alternatives & criteria",
+    "matrix": "Performance matrix",
+    "prefs": "Preference weights",
+}
+_DATA_INPUT_STEP_PENDING = "data_input_step_pending"
+if st.session_state.get("data_input_step") not in _DATA_INPUT_STEP_LABELS:
+    st.session_state["data_input_step"] = "structure"
+# Programmatic step changes must run *before* st.segmented_control(key="data_input_step") — that
+# widget owns the key; buttons set _DATA_INPUT_STEP_PENDING and rerun, then we apply here.
+if _DATA_INPUT_STEP_PENDING in st.session_state:
+    _pending = st.session_state.pop(_DATA_INPUT_STEP_PENDING)
+    if _pending in _DATA_INPUT_STEP_LABELS:
+        st.session_state["data_input_step"] = _pending
 
 # Navigation
 nav_left, nav_right = st.columns(2)
@@ -52,7 +68,7 @@ with nav_right:
     can_next = bool(st.session_state.get("data_ready"))
     if method_choice == "vft":
         next_page = "pages/3b_vft_value_functions.py"
-        next_label = "Next: Value Functions →"
+        next_label = "Next: Value curves →"
     else:
         next_page = "pages/3_run_models.py"
         next_label = "Next: Run Model →"
@@ -61,8 +77,11 @@ with nav_right:
 
 _badges = {"topsis": "TOPSIS", "vft": "VFT"}
 method_badge = _badges.get(method_choice, method_choice.upper())
-st.caption(f"Method: **{method_badge}** · Fill alternatives, criteria, matrix and preference weights, then Save.")
-st.caption("Step 2 of 7 — build alternatives/criteria, then matrix, then preference weights.")
+st.caption(
+    f"Method: **{method_badge}** · Work through **structure → matrix → weights**. "
+    "Saving **alternatives & criteria** opens the matrix; saving the **matrix** opens preference weights."
+)
+st.caption("Step 2 of 7 — data entry for this scenario.")
 st.progress(2 / 7)
 st.divider()
 
@@ -71,16 +90,23 @@ existing_alts = alt_repo.list_by_scenario(scenario_id)
 existing_crit = crit_repo.list_by_scenario(scenario_id)
 alt_names_existing = [a["name"] for a in existing_alts] if existing_alts else []
 
-tab_alts, tab_matrix, tab_prefs = st.tabs(["ALTERNATIVES & CRITERIA", "PERFORMANCE MATRIX", "PREFERENCE SETS & WEIGHTS"])
+data_input_step = st.segmented_control(
+    "Data input steps",
+    options=["structure", "matrix", "prefs"],
+    format_func=lambda k: _DATA_INPUT_STEP_LABELS[k],
+    key="data_input_step",
+    width="stretch",
+)
+st.divider()
 
 # ══════════════════════════════════════════════════════════════════════
-# TAB 1: Alternatives & Criteria
+# STEP 1: Alternatives & Criteria
 # ══════════════════════════════════════════════════════════════════════
-with tab_alts:
+if data_input_step == "structure":
     st.markdown(
         "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>"
-        "<span style='font-weight:600;color:#1E3A5F'>Input Structure</span>"
-        "<span style='font-size:0.9rem;color:#475569'>Save → open <b>Performance Matrix</b> tab</span>"
+        "<span style='font-weight:600;color:#1E3A5F'>Input structure</span>"
+        "<span style='font-size:0.9rem;color:#475569'>Save below, then you’ll jump to the performance matrix.</span>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -195,26 +221,20 @@ with tab_alts:
     crit_names = list(dict.fromkeys([c["name"] for c in crit_rows]))
 
     st.markdown("")
-    save_col, hint_col, next_col = st.columns([2, 3, 2])
-    with save_col:
-        if st.button("Save Alternatives & Criteria", type="primary", key="btn_save_alt_crit"):
-            if not alt_names:
-                st.error("Add at least 1 alternative.")
-            elif not crit_rows:
-                st.error("Add at least 1 criterion.")
-            else:
-                alt_repo.upsert_by_names(scenario_id, alt_names)
-                crit_repo.upsert_rows(scenario_id, crit_rows)
-                alt_repo.delete_missing(scenario_id, alt_names)
-                crit_repo.delete_missing(scenario_id, crit_names)
-                st.session_state["data_ready"] = False
-                st.toast("Alternatives & Criteria saved.", icon="✅")
-                st.rerun()
-    with hint_col:
-        st.caption("After saving, go to the **Performance Matrix** tab to enter values.")
-    with next_col:
-        st.caption("Then continue to matrix input.")
-        st.button("Open Performance Matrix Tab", disabled=True, key="matrix_tab_hint")
+    if st.button("Save alternatives & criteria", type="primary", key="btn_save_alt_crit"):
+        if not alt_names:
+            st.error("Add at least 1 alternative.")
+        elif not crit_rows:
+            st.error("Add at least 1 criterion.")
+        else:
+            alt_repo.upsert_by_names(scenario_id, alt_names)
+            crit_repo.upsert_rows(scenario_id, crit_rows)
+            alt_repo.delete_missing(scenario_id, alt_names)
+            crit_repo.delete_missing(scenario_id, crit_names)
+            st.session_state["data_ready"] = False
+            st.session_state[_DATA_INPUT_STEP_PENDING] = "matrix"
+            st.toast("Saved. Opening performance matrix…", icon="✅")
+            st.rerun()
 
 # ─── Reload after possible save ───────────────────────────────────────────────
 existing_alts = alt_repo.list_by_scenario(scenario_id)
@@ -223,11 +243,14 @@ alt_names_db = [a["name"] for a in existing_alts]
 crit_names_db = [c["name"] for c in existing_crit]
 
 # ══════════════════════════════════════════════════════════════════════
-# TAB 2: Performance Matrix
+# STEP 2: Performance Matrix
 # ══════════════════════════════════════════════════════════════════════
-with tab_matrix:
+if data_input_step == "matrix":
     if not alt_names_db or not crit_names_db:
-        st.info("Save alternatives and criteria first (tab above) to unlock the matrix editor.")
+        st.info("Save **alternatives & criteria** in the first step to unlock the matrix.")
+        if st.button("Go to alternatives & criteria", key="goto_structure_from_matrix"):
+            st.session_state[_DATA_INPUT_STEP_PENDING] = "structure"
+            st.rerun()
     else:
         section_header("Performance Matrix", variant="accent")
         st.caption("Enter the raw values for each alternative–criterion combination.")
@@ -265,17 +288,26 @@ with tab_matrix:
                     ])
                     meas_repo.replace_all_for_scenario(scenario_id, alt_map, crit_map, matrix_numeric)
                     st.session_state["data_ready"] = bool(st.session_state.get("preference_set_id"))
-                    st.toast("Performance Matrix saved.", icon="✅")
+                    st.session_state[_DATA_INPUT_STEP_PENDING] = "prefs"
+                    st.toast("Matrix saved. Opening preference weights…", icon="✅")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Save failed: {e}")
 
+        st.caption("After saving, you’ll jump to **Preference weights** automatically (or switch step above).")
+        if st.button("Continue to preference weights →", key="btn_goto_prefs"):
+            st.session_state[_DATA_INPUT_STEP_PENDING] = "prefs"
+            st.rerun()
+
 # ══════════════════════════════════════════════════════════════════════
-# TAB 3: Preference Sets & Gamified Weights
+# STEP 3: Preference Sets & Gamified Weights
 # ══════════════════════════════════════════════════════════════════════
-with tab_prefs:
+if data_input_step == "prefs":
     if not alt_names_db or not crit_names_db:
-        st.info("Save alternatives and criteria first.")
+        st.info("Complete **alternatives & criteria** first.")
+        if st.button("Go to alternatives & criteria", key="goto_structure_from_prefs"):
+            st.session_state[_DATA_INPUT_STEP_PENDING] = "structure"
+            st.rerun()
     else:
         section_header("Preference Sets", variant="accent")
         st.caption("A preference set holds one weighting scenario. Create multiple to compare stakeholder views.")
@@ -516,7 +548,7 @@ with tab_prefs:
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("")
-        save_w_col, tip_col = st.columns([2, 4])
+        save_w_col, run_w_col, tip_col = st.columns([2, 2, 4])
         with save_w_col:
             if st.button("Save Weights", type="primary", key=f"btn_save_weights_{pref_id}"):
                 w_vals = np.array([float(weights_by_name.get(c, 0.0)) for c in crit_names_db])
@@ -537,5 +569,15 @@ with tab_prefs:
                     st.session_state["data_ready"] = True
                 st.toast("Weights saved. You can proceed to the next step.", icon="✅")
                 st.rerun()
+        with run_w_col:
+            can_run_model = bool(st.session_state.get("data_ready"))
+            if method_choice == "vft":
+                run_model_page = "pages/3b_vft_value_functions.py"
+                run_model_label = "Next: Value curves →"
+            else:
+                run_model_page = "pages/3_run_models.py"
+                run_model_label = "Next: Run Model →"
+            if st.button(run_model_label, type="primary", disabled=not can_run_model, key=f"btn_run_model_prefs_{pref_id}"):
+                st.switch_page(run_model_page)
         with tip_col:
             st.caption("💡 Tip: Create multiple preference sets to model different stakeholder perspectives.")

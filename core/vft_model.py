@@ -103,7 +103,7 @@ class Alternative:
 
 class VFTModel:
     """
-    Main class for the Value-Focused Thinking (VFT) Model.
+    Main class for the Value Focus Thinking (VFT) Model.
     Manages attributes and alternatives, and performs calculations.
     """
     def __init__(self):

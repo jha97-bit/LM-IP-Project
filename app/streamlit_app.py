@@ -251,7 +251,7 @@ with mc1:
 with mc2:
     st.markdown("""
     <div class="method-card">
-      <h3>VFT — Value Function Transformation</h3>
+      <h3>VFT — Value Focus Thinking</h3>
       <span class="badge-vft">Multi-Attribute Value Theory</span>
       <p style="margin-top: 1rem;">Converts raw measurements into utility scores (0–1) using user-defined
       value functions. Supports linear and custom piecewise-linear functions. Ideal when preferences

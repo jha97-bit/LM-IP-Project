@@ -14,10 +14,11 @@ from persistence.repositories.measurement_repo import MeasurementRepo
 from services.vft_service import VFTService
 from core.vft_model import Attribute
 
-st.set_page_config(page_title="MCDA — VFT Value Functions", layout="wide")
+st.set_page_config(page_title="MCDA — 3b · Value curves", layout="wide")
 apply_theme()
-st.title("Step 3b: Value Functions (VFT)")
-section_header("VFT Value Functions", variant="gradient")
+st.title("Step 3b: Value curves")
+st.caption("VFT · Value Focus Thinking — set u(x) for each criterion.")
+section_header("Value curves", variant="gradient")
 
 guard_page("pages/3b_vft_value_functions.py", require_scenario=True)
 sync_method_from_scenario()

@@ -195,7 +195,7 @@ current_method = locked_method or st.session_state.get("method_choice") or "tops
 
 METHOD_LABELS = {
     "topsis": "TOPSIS",
-    "vft": "VFT — Value Function Transformation",
+    "vft": "VFT — Value Focus Thinking",
     "ahp": "Legacy (not supported — create a new scenario)",
 }
 

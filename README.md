@@ -2,7 +2,7 @@
 
 A Streamlit application for Multi-Criteria Decision Analysis (MCDA) with a **unified Run Model** step:
 - **TOPSIS** — Technique for Order of Preference by Similarity to Ideal Solution
-- **VFT** — Value-Focused Thinking with user-defined value functions
+- **VFT** — Value Focus Thinking with user-defined value functions
 - **AHP** — Analytic Hierarchy Process (scenario type + schema support; pairwise engine not implemented yet)
 
 ---
@@ -51,7 +51,7 @@ streamlit run streamlit_app.py
 | Home | `streamlit_app.py` | Overview and live DB stats |
 | 1 | `1_decision_setup.py` | Create/select Decision & Scenario; import `.mcda` files |
 | 2 | `2_data_input.py` | Add alternatives, criteria, measurement matrix, preference sets |
-| 3 | `3_preferences.py` | Legacy router (redirects to Run Model or Value Functions) |
+| 3 | `3_preferences.py` | Legacy router (redirects to Run Model or value curves step) |
 | 3 | `3_run_models.py` | **Unified run step** — TOPSIS, VFT, or AHP placeholder |
 | 3a | `3a_run_topsis.py` | Redirect → `3_run_models.py` |
 | 3b | `3b_vft_value_functions.py` | Define VFT value functions per criterion |
