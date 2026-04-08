@@ -1,0 +1,16 @@
+# Hide the top developer strip (File change / Rerun / …) on localhost.
+# Rerun is available under the sidebar “App” section instead.
+#
+# app/.streamlit/config.toml symlinks here. Streamlit loads .streamlit/config.toml from the
+# process working directory, so running `streamlit run streamlit_app.py` from app/ would miss
+# this file unless that symlink exists.
+#
+# A minimal [theme] is required so Streamlit’s internal primary (used for st.data_editor / Glide
+# selection, focus rings, etc.) is teal—not the default red. That trades off ⋮ → Settings →
+# “Choose app theme” (locked to Custom while this block exists). Visual polish stays in ui_theme.py.
+[theme]
+base = "light"
+primaryColor = "#2A9D8F"
+
+[client]
+toolbarMode = "viewer"
